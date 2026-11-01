@@ -45,6 +45,7 @@ Future<void> _loadFonts() async {
 }
 
 final _tabs = <String, (Finder, Finder)>{
+  'laika': (find.text('Cerebro'), find.text('Agenda')),
   'cosmos': (find.byIcon(Icons.blur_on), find.byIcon(Icons.schedule)),
   'papel': (find.text('Cerebro'), find.text('Agenda')),
   'pixel': (find.text('[F2] CEREBRO'), find.text('[F3] AGENDA')),
@@ -91,6 +92,13 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       await tester.pump(const Duration(seconds: 1));
       await expectLater(find.byType(VariantHost), matchesGoldenFile('../docs/screenshots/${v.id}-3-agenda.png'));
+
+      if (v.id == 'laika') {
+        await tester.tap(find.text('Mascota'));
+        await tester.pump(const Duration(seconds: 1));
+        await tester.pump(const Duration(seconds: 1));
+        await expectLater(find.byType(VariantHost), matchesGoldenFile('../docs/screenshots/laika-4-mascotas.png'));
+      }
 
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 1));

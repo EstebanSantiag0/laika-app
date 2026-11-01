@@ -13,6 +13,7 @@ import 'package:laika_app/variants/variants.dart';
 
 /// Cómo encontrar las pestañas Cerebro y Agenda en cada variante.
 final tabs = <String, (Finder, Finder)>{
+  'laika': (find.text('Cerebro'), find.text('Agenda')),
   'cosmos': (find.byIcon(Icons.blur_on), find.byIcon(Icons.schedule)),
   'papel': (find.text('Cerebro'), find.text('Agenda')),
   'pixel': (find.text('[F2] CEREBRO'), find.text('[F3] AGENDA')),

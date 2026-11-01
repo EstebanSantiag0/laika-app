@@ -27,3 +27,12 @@
 - W8.1 recordatorios reales ✅ · W8.2 API de lectura ✅
 - W8.3 áreas de vida + tiempo ✅ (Esteban aprobó el backfill). La app ya entiende nodos de área, `in_area` y `review_after`.
 - W8.4 repo público `EstebanSantiag0/laika` (manifiesto + escaneo antes de publicar) ⏳
+
+## 2026-11-01 (tarde) — Esteban eligió
+- Cerebro = esfera de Cosmos · notas y recordatorios = Brutal · paleta = Cristal · mensajes = Pixel.
+- Mascota: ninguna de las 5; pidió algo tipo Kuromi (no se puede copiar: personaje de Sanrio). Se hicieron
+  3 mascotas originales gótico-kawaii (`lib/pets/pets.dart`): cabeza, chibi, cachorro.
+- Dormir en 2 fases: 15 s sentada, 30 s acostada. 1 clic = escribir, 2 clics = abrir la app.
+- Hecho: diseño final `lib/variants/laika.dart` (primero en la galería) + `core/sphere_view.dart` compartido.
+- Siguiente: modo escritorio real en Linux (gtk-layer-shell, `--pet`) y app en ventana (`--app`);
+  luego `HttpLaika` (protocolo /ws confirmado por cc-server, ver docs/API.md).

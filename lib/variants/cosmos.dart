@@ -5,14 +5,13 @@
 
 import 'dart:math';
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../core/brain.dart';
-import '../core/layouts.dart';
 import '../core/models.dart';
 import '../core/pet.dart';
 import '../core/session.dart';
+import '../core/sphere_view.dart';
 import '../core/stage.dart';
 import '../core/widgets.dart';
 
@@ -396,74 +395,42 @@ class _CosmosBrain extends StatefulWidget {
   State<_CosmosBrain> createState() => _CosmosBrainState();
 }
 
-class _CosmosBrainState extends State<_CosmosBrain> with SingleTickerProviderStateMixin {
-  double yaw = 0.4, pitch = -0.25, zoom = 1;
-  bool spinning = true;
-  late final AnimationController _spin =
-      AnimationController(vsync: this, duration: const Duration(seconds: 1))
-        ..addListener(() {
-          if (spinning) setState(() => yaw += 0.0025);
-        })
-        ..repeat();
-  Map<String, Vec3> _pos = {};
-  int _ver = -1;
-  Map<String, Offset> _screen = {};
+final _cosmosSphere = SphereTheme(
+  background: (canvas, size) => const _StarsPainter(seed: 11, count: 380).paint(canvas, size),
+  globe: const Color(0xFF1E1B4B).withValues(alpha: 0.55),
+  ring: _cyan.withValues(alpha: 0.07),
+  edge: Colors.white.withValues(alpha: 0.2),
+  edgeLit: _cyan.withValues(alpha: 0.85),
+  selected: Colors.white,
+  match: const Color(0xFFFFE066),
+  reminder: const Color(0xFFFF5D5D),
+  label: (selected, depth) => TextStyle(
+    fontFamily: 'Adwaita Sans',
+    color: Colors.white.withValues(alpha: selected ? 1 : 0.4 + 0.5 * depth),
+    fontSize: selected ? 13 : 11,
+    shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
+  ),
+);
 
+class _CosmosBrainState extends State<_CosmosBrain> {
+  final _sphere = SphereController();
   BrainController get b => widget.brain;
 
   @override
   void dispose() {
-    _spin.dispose();
+    _sphere.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Watch(
-      listenables: [b],
+      listenables: [b, _sphere],
       builder: (context) {
         final g = b.graph;
         if (g == null) return Center(child: Text(b.error ?? 'Cargando cerebro…', style: const TextStyle(color: _cyan)));
-        if (_ver != b.version) {
-          _pos = sphereLayout(g);
-          _ver = b.version;
-        }
         return Row(children: [
-          Expanded(
-            child: LayoutBuilder(builder: (context, box) {
-              return Listener(
-                onPointerSignal: (e) {
-                  if (e is PointerScrollEvent) {
-                    setState(() => zoom = (zoom * (e.scrollDelta.dy > 0 ? 0.92 : 1.08)).clamp(0.5, 2.6));
-                  }
-                },
-                child: GestureDetector(
-                  onPanStart: (_) => spinning = false,
-                  onPanUpdate: (d) => setState(() {
-                    yaw += d.delta.dx * 0.008;
-                    pitch = (pitch + d.delta.dy * 0.008).clamp(-1.4, 1.4);
-                  }),
-                  onTapUp: (d) {
-                    final id = hitTest(_screen, d.localPosition);
-                    b.select(id);
-                    if (id != null) spinning = false;
-                  },
-                  child: CustomPaint(
-                    size: box.biggest,
-                    painter: _SpherePainter(
-                      brain: b,
-                      graph: g,
-                      pos: _pos,
-                      yaw: yaw,
-                      pitch: pitch,
-                      zoom: zoom,
-                      onProject: (m) => _screen = m,
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ),
+          Expanded(child: SphereView(brain: b, theme: _cosmosSphere, controller: _sphere)),
           _side(context, g),
         ]);
       },
@@ -484,9 +451,9 @@ class _CosmosBrainState extends State<_CosmosBrain> with SingleTickerProviderSta
           const Text('Cerebro', style: TextStyle(color: _ink, fontSize: 22, fontWeight: FontWeight.w300)),
           const Spacer(),
           IconButton(
-            tooltip: spinning ? 'Pausar giro' : 'Girar',
-            onPressed: () => setState(() => spinning = !spinning),
-            icon: Icon(spinning ? Icons.pause_circle_outline : Icons.play_circle_outline, color: _cyan),
+            tooltip: _sphere.spinning ? 'Pausar giro' : 'Girar',
+            onPressed: _sphere.toggleSpin,
+            icon: Icon(_sphere.spinning ? Icons.pause_circle_outline : Icons.play_circle_outline, color: _cyan),
           ),
         ]),
         Text('${b.visibleNodes.length} recuerdos · ${b.visibleEdges.length} conexiones',
@@ -553,133 +520,6 @@ class _CosmosBrainState extends State<_CosmosBrain> with SingleTickerProviderSta
       ]),
     );
   }
-}
-
-class _SpherePainter extends CustomPainter {
-  _SpherePainter({
-    required this.brain,
-    required this.graph,
-    required this.pos,
-    required this.yaw,
-    required this.pitch,
-    required this.zoom,
-    required this.onProject,
-  });
-
-  final BrainController brain;
-  final MemoryGraph graph;
-  final Map<String, Vec3> pos;
-  final double yaw, pitch, zoom;
-  final void Function(Map<String, Offset>) onProject;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const _StarsPainter(seed: 11, count: 380).paint(canvas, size);
-    final c = size.center(Offset.zero);
-    final radius = min(size.width, size.height) * 0.36 * zoom;
-    const camera = 3.2;
-
-    final visible = brain.visibleNodes;
-    final proj = <String, (Offset, double)>{}; // pantalla, profundidad (−1 atrás … 1 frente)
-    for (final n in visible) {
-      final p = pos[n.id];
-      if (p == null) continue;
-      final v = p.rotate(yaw, pitch);
-      final k = camera / (camera - v.z);
-      proj[n.id] = (c + Offset(v.x, v.y) * radius * k, v.z);
-    }
-
-    // Globo de ambiente (decorativo).
-    canvas.drawCircle(c, radius * 1.02,
-        Paint()
-          ..shader = RadialGradient(colors: [
-            const Color(0xFF1E1B4B).withValues(alpha: 0.55),
-            const Color(0xFF0B1026).withValues(alpha: 0.0),
-          ]).createShader(Rect.fromCircle(center: c, radius: radius * 1.1)));
-    final ring = Paint()
-      ..style = PaintingStyle.stroke
-      ..color = _cyan.withValues(alpha: 0.07);
-    for (var i = 1; i <= 3; i++) {
-      canvas.drawOval(Rect.fromCenter(center: c, width: radius * 2, height: radius * 2 * (i / 3.4)), ring);
-    }
-
-    final sel = brain.selectedId;
-    final hot = <String>{
-      ?sel,
-      if (sel != null) ...brain.neighbors(sel).map((n) => n.id),
-    };
-
-    // Conexiones.
-    for (final e in brain.visibleEdges) {
-      final a = proj[e.source], bb = proj[e.target];
-      if (a == null || bb == null) continue;
-      final depth = ((a.$2 + bb.$2) / 2 + 1) / 2;
-      final lit = hot.contains(e.source) && hot.contains(e.target);
-      canvas.drawLine(
-          a.$1,
-          bb.$1,
-          Paint()
-            ..strokeWidth = lit ? 1.6 : 0.8
-            ..color = (lit ? _cyan : Colors.white).withValues(alpha: lit ? 0.85 : 0.05 + 0.18 * depth));
-    }
-
-    // Nodos, de atrás hacia adelante.
-    final order = proj.keys.toList()..sort((x, y) => proj[x]!.$2.compareTo(proj[y]!.$2));
-    final screen = <String, Offset>{};
-    for (final id in order) {
-      final n = graph.nodeById[id]!;
-      final (o, z) = proj[id]!;
-      final depth = (z + 1) / 2;
-      final col = graph.colorOf(n);
-      final base = switch (n.kind) {
-        NodeKind.entity => 6.5,
-        NodeKind.episode => 5.0,
-        NodeKind.reminder => 5.5,
-        _ => 3.2,
-      };
-      final r = (base + n.importance * 3) * (0.55 + 0.6 * depth) * zoom.clamp(0.8, 1.6);
-      final isSel = id == sel;
-      final match = brain.matches(n);
-      final alpha = n.timeScope == TimeScope.archived ? 0.35 : 0.35 + 0.65 * depth;
-      canvas.drawCircle(o, r * 3, Paint()..color = col.withValues(alpha: 0.12 * alpha));
-      canvas.drawCircle(o, r, Paint()..color = col.withValues(alpha: alpha));
-      if (n.kind == NodeKind.reminder) {
-        canvas.drawCircle(o, r + 3, Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.2
-          ..color = const Color(0xFFFF5D5D).withValues(alpha: alpha));
-      }
-      if (isSel || match) {
-        canvas.drawCircle(o, r + 6, Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2
-          ..color = isSel ? Colors.white : const Color(0xFFFFE066));
-      }
-      screen[id] = o;
-      final showLabel = isSel || match || hot.contains(id) || (n.kind == NodeKind.entity && z > 0.35);
-      if (showLabel) {
-        final tp = TextPainter(
-          text: TextSpan(
-            text: n.label,
-            style: TextStyle(
-              fontFamily: 'Adwaita Sans',
-              color: Colors.white.withValues(alpha: isSel ? 1 : 0.4 + 0.5 * depth),
-              fontSize: isSel ? 13 : 11,
-              shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
-            ),
-          ),
-          textDirection: TextDirection.ltr,
-          maxLines: 1,
-          ellipsis: '…',
-        )..layout(maxWidth: 180);
-        tp.paint(canvas, o + Offset(r + 5, -tp.height / 2));
-      }
-    }
-    onProject(screen);
-  }
-
-  @override
-  bool shouldRepaint(covariant _SpherePainter old) => true;
 }
 
 // ── Agenda ──────────────────────────────────────────────────────────────────
