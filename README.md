@@ -17,8 +17,10 @@ por tiempo.
 
 **Laika tiene 15 caras** y las cambia según lo que pasa y lo que dice (se ríe
 con "jaja", se sorprende cuando suena un recordatorio, trama algo cuando lo
-anota, se apena si algo falla…). Es un diseño original: capucha con orejas de
-murciélago, luna en la frente, nariz de perrito y cola con punta de corazón.
+anota, se apena si algo falla…). Por defecto es un círculo blanco estilo
+Brutal; puedes darle **tu propia skin** con imágenes (ver
+[`docs/SKINS.md`](docs/SKINS.md)) y elegirla en **Ajustes**, junto con su
+tamaño y el servidor.
 
 ![Emociones de Laika](docs/screenshots/laika-4-emociones.png)
 
@@ -141,8 +143,8 @@ En X11 o sin `gtk-layer-shell`, `--pet` abre una ventana normal con el escritori
 
 ### Conectar con el servidor real
 
-Sin configuración la app usa un **servidor simulado**. Para el real, crea
-`~/.config/laika/config.json` (no va en el repositorio):
+Sin configuración la app usa un **servidor simulado**. Para el real, ponlo en
+**Ajustes → Servidor**, o crea `~/.config/laika/config.json` (no va en el repositorio):
 
 ```json
 {"server": "https://tu-servidor.tu-tailnet.ts.net"}
@@ -229,6 +231,7 @@ lib/
 │   ├── models.dart        datos: nodos, áreas, recordatorios (contrato de la API)
 │   ├── api.dart           interfaz con el servidor
 │   ├── http_laika.dart    cliente real (HTTPS + WebSocket)
+│   ├── config.dart        ajustes en ~/.config/laika/config.json
 │   ├── mock_backend.dart  servidor simulado
 │   ├── sample_data.dart   recuerdos de ejemplo (ficticios)
 │   ├── pet.dart           reglas de la mascota (dormir, despertar, burbujas)
@@ -241,12 +244,15 @@ lib/
 ├── desktop/               Laika sobre el escritorio real (Linux)
 │   ├── pet_overlay.dart   la capa transparente
 │   └── window_bridge.dart qué zonas reciben clics (canal con linux/runner)
-├── pets/laika_pet.dart    Laika dibujada con código: 15 emociones y 2 formas de dormir
+├── pets/
+│   ├── circle_face.dart   la cara-círculo por defecto: 15 emociones y 2 formas de dormir
+│   └── skins.dart         skins de imágenes (~/.config/laika/skins, ./skins)
 └── variants/              diseños: laika.dart (el elegido) + los 5 prototipos
     ├── laika.dart  cosmos.dart  papel.dart  pixel.dart  brutal.dart  cristal.dart
     └── variants.dart      lista de diseños
 linux/runner/my_application.cc   ventana nativa; modo --pet con gtk-layer-shell
 tool/install_linux.sh            instalar para tu usuario
+tool/make_skin.py                armar una skin con tus imágenes
 ```
 
 Explicación completa: [`docs/architecture.md`](docs/architecture.md).

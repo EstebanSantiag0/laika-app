@@ -28,6 +28,13 @@ BUNDLE="build/linux/x64/release/bundle"
 mkdir -p "$DEST" "$APPS"
 rm -rf "$DEST.new" && cp -r "$BUNDLE" "$DEST.new" && rm -rf "$DEST" && mv "$DEST.new" "$DEST"
 
+# Skins personales del proyecto (./skins, fuera de git) → ~/.config/laika/skins (sin sobrescribir).
+if [[ -d skins ]] && compgen -G "skins/*/" > /dev/null; then
+  mkdir -p "$HOME/.config/laika/skins"
+  cp -rn skins/*/ "$HOME/.config/laika/skins/"
+  echo "Skins copiadas a ~/.config/laika/skins"
+fi
+
 desktop() { # nombre, args, comentario
   cat <<EOD
 [Desktop Entry]

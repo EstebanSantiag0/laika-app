@@ -8,6 +8,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../core/config.dart';
 import '../core/session.dart';
 import '../core/stage.dart';
 import '../variants/laika.dart';
@@ -51,11 +52,16 @@ class _PetOverlayState extends State<PetOverlay> {
       ),
       home: Material(
         type: MaterialType.transparency,
-        child: PetStage(
-          controller: widget.session.pet,
-          skin: const LaikaSkin(transparent: true),
-          onOpenApp: _openApp,
-          onRegions: WindowBridge.setInputRegion,
+        // Si cambias la skin o el tamaño en Ajustes, se actualiza aquí al instante.
+        child: ValueListenableBuilder(
+          valueListenable: config,
+          builder: (context, cfg, _) => PetStage(
+            key: ValueKey(cfg.petSize),
+            controller: widget.session.pet,
+            skin: const LaikaSkin(transparent: true),
+            onOpenApp: _openApp,
+            onRegions: WindowBridge.setInputRegion,
+          ),
         ),
       ),
     );

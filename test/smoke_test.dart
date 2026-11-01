@@ -9,6 +9,10 @@ import 'package:laika_app/core/mock_backend.dart';
 import 'package:laika_app/core/pet.dart';
 import 'package:laika_app/core/stage.dart';
 import 'package:laika_app/main.dart';
+import 'package:laika_app/pets/skins.dart';
+
+import 'dart:io';
+
 import 'package:laika_app/variants/variants.dart';
 
 /// Cómo encontrar las pestañas Cerebro y Agenda en cada variante.
@@ -49,6 +53,90 @@ void main() {
     expect(Mood.forText('✏️ goed → good'), Mood.cheeky);
     expect(Mood.forText('⚠️ Laika no pudo contestar.'), Mood.ashamed);
     expect(Mood.forText('Muy bien, sigamos con el ruso.'), Mood.happy);
+  });
+
+  test('una skin de imágenes usa otra parecida si falta una emoción', () {
+    final dir = Directory.systemTemp.createTempSync('laika_skin_');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    // PNG de 1×1 transparente.
+    const png = [
+      137,
+      80,
+      78,
+      71,
+      13,
+      10,
+      26,
+      10,
+      0,
+      0,
+      0,
+      13,
+      73,
+      72,
+      68,
+      82,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      8,
+      6,
+      0,
+      0,
+      0,
+      31,
+      21,
+      196,
+      137,
+      0,
+      0,
+      0,
+      13,
+      73,
+      68,
+      65,
+      84,
+      120,
+      156,
+      99,
+      0,
+      1,
+      0,
+      0,
+      5,
+      0,
+      1,
+      13,
+      10,
+      45,
+      180,
+      0,
+      0,
+      0,
+      0,
+      73,
+      69,
+      78,
+      68,
+      174,
+      66,
+      96,
+      130,
+    ];
+    for (final n in ['neutral', 'doubting', 'sleepingLying']) {
+      File('${dir.path}/$n.png').writeAsBytesSync(png);
+    }
+    final look = ImageLook.fromDir(dir)!;
+    expect(look.fileFor(Mood.thinking)!.path, endsWith('doubting.png'));
+    expect(look.fileFor(Mood.sleeping)!.path, endsWith('sleepingLying.png'));
+    expect(look.fileFor(Mood.sleeping, lying: true)!.path, endsWith('sleepingLying.png'));
+    expect(look.fileFor(Mood.inLove)!.path, endsWith('neutral.png'));
+    expect(ImageLook.fromDir(Directory.systemTemp.createTempSync('laika_vacia_')), isNull);
   });
 
   test('dormida, despertando y pensando tienen su cara', () async {

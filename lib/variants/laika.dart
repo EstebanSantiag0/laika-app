@@ -6,7 +6,8 @@
 //  • Cerebro: la esfera 3D de Cosmos, en versión clara.
 //  • Notas y recordatorios: estilo Brutal (bordes gruesos, sombras duras),
 //    con los colores de Cristal.
-//  • Mascota: Laika, diseño original con 15 emociones (lib/pets/laika_pet.dart).
+//  • Mascota: cara-círculo estilo Brutal con 15 emociones (lib/pets/circle_face.dart)
+//    o una skin de imágenes elegida en Ajustes (lib/pets/skins.dart).
 
 import 'dart:math';
 
@@ -19,7 +20,8 @@ import '../core/session.dart';
 import '../core/sphere_view.dart';
 import '../core/stage.dart';
 import '../core/widgets.dart';
-import '../pets/laika_pet.dart';
+import '../core/config.dart';
+import '../pets/skins.dart';
 
 // ── Paleta Cristal ──────────────────────────────────────────────────────────
 const lInk = Color(0xFF3B3355);
@@ -50,7 +52,7 @@ BoxDecoration brutalBox(Color fill, {double shadow = 5, double border = 2.5}) =>
 final laikaSpec = VariantSpec(
   id: 'laika',
   name: 'Laika (mezcla elegida)',
-  tagline: 'Paleta Cristal, mensajes Pixel, cerebro-esfera de Cosmos y notas Brutal. mascota con 15 emociones.',
+  tagline: 'Paleta Cristal, mensajes Pixel, cerebro-esfera de Cosmos y notas Brutal. cara con 15 emociones y skins propias.',
   swatch: const [lLavender, lPink, lMint, lAccent],
   build: (s) => LaikaApp(session: s),
 );
@@ -114,7 +116,7 @@ class LaikaSkin extends PetSkin {
   final bool transparent;
 
   @override
-  double get petSize => 150;
+  double get petSize => config.value.petSize;
 
   @override
   double get chatWidth => 330;
@@ -133,10 +135,8 @@ class LaikaSkin extends PetSkin {
         ]);
 
   @override
-  Widget pet(BuildContext context, PetController c, double t) => CustomPaint(
-        painter: LaikaPainter(
-            mood: c.mood, lying: c.sleepPose == SleepPose.lying, t: t, bell: c.pendingReminders.isNotEmpty),
-      );
+  Widget pet(BuildContext context, PetController c, double t) => currentLook.value
+      .build(c.mood, lying: c.sleepPose == SleepPose.lying, t: t, bell: c.pendingReminders.isNotEmpty);
 
   /// Cuadro de diálogo estilo Pixel (doble borde, letra por letra) en colores Cristal.
   @override
@@ -236,10 +236,18 @@ class _LaikaAppState extends State<LaikaApp> {
 
   List<(String, Widget Function())> get _tabs => [
         if (widget.showDesktop)
-          ('Escritorio', () => PetStage(controller: widget.session.pet, skin: const LaikaSkin(), onOpenApp: () => setState(() => tab = 1))),
+          ('Escritorio', () => ValueListenableBuilder(
+                valueListenable: config,
+                builder: (context, cfg, _) => PetStage(
+                    key: ValueKey(cfg.petSize),
+                    controller: widget.session.pet,
+                    skin: const LaikaSkin(),
+                    onOpenApp: () => setState(() => tab = 1)),
+              )),
         ('Cerebro', () => LaikaBrain(brain: widget.session.brain)),
         ('Agenda', () => LaikaAgenda(rem: widget.session.reminders)),
         ('Emociones', () => const MoodSheet()),
+        ('Ajustes', () => const LaikaSettings()),
       ];
 
   @override
@@ -539,7 +547,7 @@ class _MoodSheetState extends State<MoodSheet> with SingleTickerProviderStateMix
     super.dispose();
   }
 
-  Widget _card(String label, String when, Mood mood, {bool lying = false}) => Container(
+  Widget _card(PetSkinLook look, String label, String when, Mood mood, {bool lying = false}) => Container(
         width: 180,
         padding: const EdgeInsets.fromLTRB(8, 10, 8, 12),
         decoration: brutalBox(Colors.white, shadow: 4, border: 2),
@@ -549,8 +557,7 @@ class _MoodSheetState extends State<MoodSheet> with SingleTickerProviderStateMix
             width: 150,
             child: AnimatedBuilder(
               animation: _a,
-              builder: (context, _) =>
-                  CustomPaint(painter: LaikaPainter(mood: mood, lying: lying, t: _watch.elapsedMilliseconds / 1000)),
+              builder: (context, _) => look.build(mood, lying: lying, t: _watch.elapsedMilliseconds / 1000),
             ),
           ),
           Text(label, style: _t(15, w: FontWeight.w900)),
@@ -560,22 +567,169 @@ class _MoodSheetState extends State<MoodSheet> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(36, 80, 36, 60),
-      children: [
-        Text('Emociones', style: _t(44, w: FontWeight.w900)),
-        Text('Laika cambia de cara según lo que pasa y lo que dice. Las reacciones duran unos segundos.',
-            style: _t(13, color: lSoft)),
-        const SizedBox(height: 22),
-        Wrap(spacing: 18, runSpacing: 18, children: [
-          for (final m in Mood.values)
-            if (m == Mood.sleeping) ...[
-              _card('Dormida sentada', 'tras 15 s sin hacerle caso', m),
-              _card('Dormida en su cojín', '15 s después', m, lying: true),
-            ] else
-              _card(m.label, m.when, m),
+    return ValueListenableBuilder(
+      valueListenable: currentLook,
+      builder: (context, look, _) => ListView(
+        padding: const EdgeInsets.fromLTRB(36, 80, 36, 60),
+        children: [
+          Text('Emociones', style: _t(44, w: FontWeight.w900)),
+          Text('Laika cambia de cara según lo que pasa y lo que dice. Las reacciones duran unos segundos. '
+              'Skin: ${look.name} (se cambia en Ajustes).',
+              style: _t(13, color: lSoft)),
+          const SizedBox(height: 22),
+          Wrap(spacing: 18, runSpacing: 18, children: [
+            for (final m in Mood.values)
+              if (m == Mood.sleeping) ...[
+                _card(look, 'Dormida', 'tras 15 s sin hacerle caso', m),
+                _card(look, 'Dormida profunda', '15 s después', m, lying: true),
+              ] else
+                _card(look, m.label, m.when, m),
+          ]),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Ajustes ─────────────────────────────────────────────────────────────────
+
+/// Skin, tamaño de Laika y servidor. Se guarda en ~/.config/laika/config.json;
+/// la mascota del escritorio (--pet) lo nota al instante.
+class LaikaSettings extends StatefulWidget {
+  const LaikaSettings({super.key});
+  @override
+  State<LaikaSettings> createState() => _LaikaSettingsState();
+}
+
+class _LaikaSettingsState extends State<LaikaSettings> with SingleTickerProviderStateMixin {
+  late final AnimationController _a = AnimationController(vsync: this, duration: const Duration(seconds: 1))..repeat();
+  final _watch = Stopwatch()..start();
+  late final _server = TextEditingController(text: config.value.server ?? '');
+  List<PetSkinLook> _skins = availableSkins();
+  String? _saved;
+
+  @override
+  void dispose() {
+    _a.dispose();
+    _server.dispose();
+    super.dispose();
+  }
+
+  Future<void> _set(LaikaConfig next, String msg) async {
+    await updateConfig(next);
+    if (mounted) setState(() => _saved = msg);
+  }
+
+  Widget _section(String title, String hint, Widget child) => Container(
+        margin: const EdgeInsets.only(bottom: 22),
+        padding: const EdgeInsets.all(18),
+        decoration: brutalBox(Colors.white),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title, style: _t(20, w: FontWeight.w900)),
+          Text(hint, style: _t(12.5, color: lSoft)),
+          const SizedBox(height: 14),
+          child,
         ]),
-      ],
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder(
+      valueListenable: config,
+      builder: (context, cfg, _) => ListView(
+        padding: const EdgeInsets.fromLTRB(36, 80, 36, 60),
+        children: [
+          Text('Ajustes', style: _t(44, w: FontWeight.w900)),
+          Text(_saved ?? 'Se guardan en ~/.config/laika/config.json (fuera del repositorio).', style: _t(13, color: lSoft)),
+          const SizedBox(height: 22),
+          _section(
+            'Skin',
+            'Cómo se ve Laika. Para agregar una: una carpeta con una imagen por emoción en '
+                '~/.config/laika/skins/ (ver docs/SKINS.md).',
+            Wrap(spacing: 16, runSpacing: 16, children: [
+              for (final s in _skins)
+                GestureDetector(
+                  onTap: () => _set(cfg.copyWith(skin: s.id), 'Skin: ${s.name} ✓'),
+                  child: Container(
+                    width: 150,
+                    padding: const EdgeInsets.all(10),
+                    decoration: brutalBox(s.id == cfg.skin ? lLavender : Colors.white, shadow: s.id == cfg.skin ? 2 : 5, border: 2),
+                    child: Column(children: [
+                      SizedBox(
+                        width: 110,
+                        height: 110,
+                        child: AnimatedBuilder(
+                          animation: _a,
+                          builder: (context, _) => s.build(Mood.neutral, t: _watch.elapsedMilliseconds / 1000),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(s.name, style: _t(14, w: FontWeight.w800)),
+                      Text(s.id == cfg.skin ? '✓ en uso' : 'Elegir',
+                          style: _t(12, w: FontWeight.w700, color: s.id == cfg.skin ? lAccent : lSoft)),
+                    ]),
+                  ),
+                ),
+              GestureDetector(
+                onTap: () => setState(() => _skins = availableSkins()),
+                child: Container(
+                  width: 150,
+                  height: 170,
+                  alignment: Alignment.center,
+                  decoration: brutalBox(lMint, shadow: 5, border: 2),
+                  child: Text('↻ Buscar skins', style: _t(14, w: FontWeight.w800)),
+                ),
+              ),
+            ]),
+          ),
+          _section(
+            'Tamaño en el escritorio',
+            'Qué tan grande se ve Laika: ${cfg.petSize.round()} px.',
+            Slider(
+              value: cfg.petSize,
+              min: 80,
+              max: 300,
+              divisions: 22,
+              activeColor: lAccent,
+              label: '${cfg.petSize.round()} px',
+              onChanged: (v) => config.value = cfg.copyWith(petSize: v),
+              onChangeEnd: (v) => _set(cfg.copyWith(petSize: v), 'Tamaño: ${v.round()} px ✓'),
+            ),
+          ),
+          _section(
+            'Servidor',
+            'Dirección de tu servidor de Laika por Tailscale. Vacío = servidor simulado. '
+                'Se usa la próxima vez que abras Laika.',
+            Row(children: [
+              Expanded(
+                child: TextField(
+                  controller: _server,
+                  style: _m(13),
+                  decoration: InputDecoration(
+                    hintText: 'https://tu-servidor.tu-tailnet.ts.net',
+                    hintStyle: _m(13, color: lSoft),
+                    isDense: true,
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              GestureDetector(
+                onTap: () {
+                  final v = _server.text.trim();
+                  _set(v.isEmpty ? cfg.copyWith(clearServer: true) : cfg.copyWith(server: v),
+                      v.isEmpty ? 'Servidor simulado ✓' : 'Servidor guardado ✓');
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: brutalBox(lPink, shadow: 3, border: 2),
+                  child: Text('Guardar', style: _t(14, w: FontWeight.w800)),
+                ),
+              ),
+            ]),
+          ),
+        ],
+      ),
     );
   }
 }

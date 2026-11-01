@@ -9,6 +9,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'api.dart';
+import 'config.dart';
 import 'models.dart';
 
 class HttpLaika implements LaikaApi {
@@ -185,23 +186,12 @@ class HttpLaika implements LaikaApi {
 }
 
 /// Dónde está el servidor. Orden: --dart-define=LAIKA_SERVER=…, variable de
-/// entorno LAIKA_SERVER, o el archivo ~/.config/laika/config.json
-/// ({"server": "https://tu-servidor.tu-tailnet.ts.net"}). Si no hay nada,
-/// la app usa el servidor simulado.
+/// entorno LAIKA_SERVER, o "server" en ~/.config/laika/config.json (se puede
+/// poner desde Ajustes). Si no hay nada, la app usa el servidor simulado.
 String? laikaServerUrl() {
   const fromBuild = String.fromEnvironment('LAIKA_SERVER');
   if (fromBuild.isNotEmpty) return fromBuild;
   final env = Platform.environment['LAIKA_SERVER'];
   if (env != null && env.isNotEmpty) return env;
-  final home = Platform.environment['HOME'];
-  if (home == null) return null;
-  final f = File('$home/.config/laika/config.json');
-  if (!f.existsSync()) return null;
-  try {
-    final j = jsonDecode(f.readAsStringSync());
-    final s = j is Map ? j['server'] : null;
-    return s is String && s.isNotEmpty ? s : null;
-  } catch (_) {
-    return null;
-  }
+  return LaikaConfig.load().server;
 }

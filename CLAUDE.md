@@ -25,10 +25,13 @@ build/linux/x64/release/bundle/laika_app --pet   # mascota sobre el escritorio (
 build/linux/x64/release/bundle/laika_app --app   # app en ventana normal
 tool/install_linux.sh [--autostart|--uninstall]   # preguntar a Esteban antes de --autostart
 ```
-- Servidor real: `~/.config/laika/config.json` `{"server": …}` (fuera del repo). Sin él, servidor simulado.
+- Ajustes: `~/.config/laika/config.json` `{"server", "skin", "petSize"}` (fuera del repo). Sin server → simulado.
+- Skins de imágenes: `./skins/` y `~/.config/laika/skins/` (en `.gitignore`; imágenes personales,
+  **nunca** subirlas). Formato: `docs/SKINS.md`. No dibujar personajes con dueño en el repo.
 
 ## Docs
 - `docs/architecture.md` — capas, máquina de estados de la mascota, plan de escritorio real.
 - `docs/API.md` — contrato con el servidor (fuente de verdad: docs/API.md del repo del servidor).
 - `docs/VARIANTES.md` — los 5 diseños.
+- `docs/SKINS.md` — skins de imágenes y `tool/make_skin.py`.
 - `docs/PROGRESS.md` — estado y siguiente paso.

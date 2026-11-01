@@ -51,8 +51,15 @@ muestra y envía.
 
 ### Emociones (`Mood`)
 
-`PetController.mood` dice qué cara pone Laika; `pets/laika_pet.dart` la dibuja
-(todo con `CustomPainter`, en una caja de 100×100).
+`PetController.mood` dice qué cara pone Laika. La skin en uso (`pets/skins.dart`,
+elegida en Ajustes) la dibuja: por defecto `pets/circle_face.dart` (`CustomPainter`
+en una caja de 100×100), o una imagen por emoción (formato en `docs/SKINS.md`).
+
+### Ajustes (`core/config.dart`)
+
+`~/.config/laika/config.json` → `{server, skin, petSize}`. La pestaña Ajustes lo
+escribe (archivo temporal + rename); `--pet` y `--app` vigilan la carpeta con
+inotify (`Directory.watch`, sin sondeo) y se actualizan al instante.
 
 | Estado / evento | Cara |
 |---|---|

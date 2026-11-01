@@ -30,8 +30,8 @@
 
 ## 2026-11-01 (tarde) — Esteban eligió
 - Cerebro = esfera de Cosmos · notas y recordatorios = Brutal · paleta = Cristal · mensajes = Pixel.
-- Mascota: ninguna de las 5; pidió algo tipo Kuromi (no se puede copiar: personaje de Sanrio). Se hicieron
-  3 mascotas originales gótico-kawaii (`lib/pets/pets.dart`): cabeza, chibi, cachorro.
+- Mascota: ninguna de las 5; pidió algo parecido a un personaje con dueño (no se puede copiar en un repo público).
+  Se hicieron 3 mascotas originales gótico-kawaii (ya quitadas).
 - Dormir en 2 fases: 15 s sentada, 30 s acostada. 1 clic = escribir, 2 clics = abrir la app.
 - Hecho: diseño final `lib/variants/laika.dart` (primero en la galería) + `core/sphere_view.dart` compartido.
 - Siguiente: modo escritorio real en Linux (gtk-layer-shell, `--pet`) y app en ventana (`--app`);
@@ -54,9 +54,8 @@
 - W8.4: aprobar la publicación de `EstebanSantiag0/laika` (el servidor) y que se cree el repo vacío.
 
 ## 2026-11-01 (noche, 2) — nueva mascota
-- Esteban rechazó las 3 mascotas y dejó 13 referencias de Kuromi (emociones) en `~/Pictures/Screenshots/kuromi*.png`.
-  Kuromi es de Sanrio y el repo es público → se hizo **un diseño original** con esas emociones:
-  `lib/pets/laika_pet.dart` (capucha con orejas de murciélago, luna, nariz de perrito, gorguera lila, cola-corazón).
+- Esteban rechazó las 3 mascotas y dejó referencias de emociones (personaje con dueño; no se copia en el repo).
+  Se hizo un diseño original con esas emociones (`lib/pets/laika_pet.dart`, ya quitado).
 - 15 `Mood` en `core/pet.dart` + reacciones automáticas (`Mood.forText`, recordatorios, memoria).
 - Pestaña "Mascota" → "Emociones" (hoja con todas las caras). Captura: `docs/screenshots/laika-4-emociones.png`.
 - Se quitó `lib/pets/pets.dart` (las 3 anteriores; siguen en el historial de git).
@@ -66,3 +65,13 @@
 1. Recordar mascota elegida y posición (`~/.config/laika/state.json`).
 2. Al reconectar, pedir `/api/history` para no perder mensajes.
 3. Android: burbuja flotante + notificaciones.
+
+## 2026-11-01 (noche, 3) — círculo + skins + ajustes
+- Esteban: "aún se ve horrible". Nueva cara por defecto: **círculo blanco estilo Brutal** con las 15 emociones
+  (`lib/pets/circle_face.dart`). Se quitó `laika_pet.dart`.
+- **Skins de imágenes** (`lib/pets/skins.dart`, formato en `docs/SKINS.md`): una imagen por emoción en
+  `~/.config/laika/skins/<nombre>/` o `./skins/<nombre>/` (carpeta en `.gitignore`: imágenes personales, no se suben).
+- **Ajustes** (`core/config.dart` + pestaña Ajustes): skin, tamaño de Laika y servidor → `~/.config/laika/config.json`.
+  La mascota `--pet` vigila el archivo (inotify) y cambia al instante.
+- `tool/make_skin.py`: arma una skin desde imágenes propias (recorta y quita el fondo liso).
+- Esperando: que Esteban arme su skin personal con `tool/make_skin.py` y la elija en Ajustes.

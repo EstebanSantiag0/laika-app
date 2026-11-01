@@ -12,6 +12,7 @@
 
 import 'package:flutter/material.dart';
 
+import 'core/config.dart';
 import 'core/http_laika.dart';
 import 'core/session.dart';
 import 'desktop/pet_overlay.dart';
@@ -21,6 +22,8 @@ import 'variants/variants.dart';
 
 Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Ajustes compartidos entre la mascota (--pet) y la app (--app).
+  if (args.contains('--pet') || args.contains('--app')) watchConfig();
   LaikaSession session() {
     final url = laikaServerUrl();
     return LaikaSession(url == null ? null : HttpLaika(url));
