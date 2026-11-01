@@ -372,57 +372,50 @@ class _PixelBrain extends StatelessWidget {
         return Row(children: [
           Expanded(
             child: LayoutBuilder(builder: (context, box) {
-              const cell = 26.0;
-              final size = Size(box.maxWidth, box.maxHeight - (sel != null ? 170 : 0));
-              final lay = roomsLayout(g.areas, b.visibleNodes, size, cell);
+              const row = 19.0;
+              final lay = roomsLayout(g.areas, b.visibleNodes, box.biggest, row);
+              // Zona de clic: todo el renglón (ícono + nombre).
+              final hits = {for (final e in lay.cells.entries) e.key: e.value + Offset(lay.colWidth / 2 - 10, 0)};
               return Stack(children: [
                 const Positioned.fill(child: CustomPaint(painter: _Scanlines())),
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  width: size.width,
-                  height: size.height,
+                Positioned.fill(
                   child: GestureDetector(
-                    onTapUp: (d) => b.select(hitTest(lay.cells, d.localPosition, radius: 14)),
-                    child: CustomPaint(painter: _RoomsPainter(brain: b, graph: g, rooms: lay.rooms, cells: lay.cells, cell: cell)),
-                  ),
-                ),
-                if (sel != null)
-                  Positioned(
-                    left: 8,
-                    right: 8,
-                    bottom: 8,
-                    height: 158,
-                    child: _PixBox(
-                      child: SingleChildScrollView(
-                        child: NodeDetails(
-                          brain: b,
-                          node: sel,
-                          title: _px(16, bold: true),
-                          body: _px(13),
-                          meta: _px(11, color: _c1),
-                          linkBuilder: (context, n, onTap) => GestureDetector(
-                            onTap: onTap,
-                            child: Container(
-                              color: _c0,
-                              padding: const EdgeInsets.symmetric(horizontal: 4),
-                              child: Text('► ${n.label}', style: _px(11, color: _c3)),
-                            ),
-                          ),
-                        ),
-                      ),
+                    onTapUp: (d) => b.select(hitTest(hits, d.localPosition, radius: lay.colWidth / 2)),
+                    child: CustomPaint(
+                      painter: _RoomsPainter(brain: b, graph: g, rooms: lay.rooms, cells: lay.cells, colWidth: lay.colWidth, row: row),
                     ),
                   ),
+                ),
               ]);
             }),
           ),
           Container(
-            width: 290,
+            width: 300,
             color: _c0,
-            child: ListView(padding: const EdgeInsets.all(12), children: [
+            child: ListView(padding: const EdgeInsets.fromLTRB(12, 12, 12, 70), children: [
               Text('MAPA DEL CEREBRO', style: _px(15, color: _c3, bold: true)),
               Text('${b.visibleNodes.length} RECUERDOS', style: _px(11, color: _c2)),
               const SizedBox(height: 10),
+              if (sel != null) ...[
+                _PixBox(
+                  child: NodeDetails(
+                    brain: b,
+                    node: sel,
+                    title: _px(15, bold: true),
+                    body: _px(12),
+                    meta: _px(10, color: _c1),
+                    linkBuilder: (context, n, onTap) => GestureDetector(
+                      onTap: onTap,
+                      child: Container(
+                        color: _c0,
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        child: Text('► ${n.label}', style: _px(11, color: _c3)),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               TextField(
                 onChanged: b.setQuery,
                 style: _px(13, color: _c3),
@@ -448,7 +441,7 @@ class _PixelBrain extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              Text('LEYENDA\n■ ENTIDAD   ▪ DATO\n✚ CONVERSACIÓN\n! RECORDATORIO   □ ARCHIVADO', style: _px(11, color: _c2)),
+              Text('LEYENDA\n■ ENTIDAD   ▪ DATO\n+ CONVERSACIÓN\n! RECORDATORIO   □ ARCHIVADO', style: _px(11, color: _c2)),
             ]),
           ),
         ]);
@@ -458,12 +451,19 @@ class _PixelBrain extends StatelessWidget {
 }
 
 class _RoomsPainter extends CustomPainter {
-  _RoomsPainter({required this.brain, required this.graph, required this.rooms, required this.cells, required this.cell});
+  _RoomsPainter({
+    required this.brain,
+    required this.graph,
+    required this.rooms,
+    required this.cells,
+    required this.colWidth,
+    required this.row,
+  });
   final BrainController brain;
   final MemoryGraph graph;
   final Map<String, Rect> rooms;
   final Map<String, Offset> cells;
-  final double cell;
+  final double colWidth, row;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -492,20 +492,18 @@ class _RoomsPainter extends CustomPainter {
     }
 
     final sel = brain.selectedId;
-    // Pasillos (conexiones) en escalón; solo los del nodo elegido se resaltan.
-    for (final e in brain.visibleEdges) {
-      final a = cells[e.source], b = cells[e.target];
-      if (a == null || b == null) continue;
-      final lit = e.source == sel || e.target == sel;
-      if (!lit && sel != null) continue;
-      final p = Paint()..color = lit ? _c0 : _c1.withValues(alpha: 0.35);
-      final w = lit ? 3.0 : 1.0;
-      final corner = Offset(b.dx, a.dy);
-      for (final (s, t) in [(a, corner), (corner, b)]) {
-        final len = (t - s).distance;
-        for (var d = 0.0; d < len; d += 6) {
-          final q = s + (t - s) * (d / len);
-          canvas.drawRect(Rect.fromCenter(center: q, width: w, height: w), p);
+    final linked = sel == null ? <String>{} : brain.neighbors(sel).map((n) => n.id).toSet();
+    // Pasillos: solo las conexiones del recuerdo elegido, en escalón.
+    if (sel != null && cells[sel] != null) {
+      for (final id in linked) {
+        final a = cells[sel]!, b = cells[id];
+        if (b == null) continue;
+        final corner = Offset(b.dx, a.dy);
+        for (final (s, t) in [(a, corner), (corner, b)]) {
+          final len = (t - s).distance;
+          for (var d = 0.0; d < len; d += 6) {
+            canvas.drawRect(Rect.fromCenter(center: s + (t - s) * (d / len), width: 3, height: 3), dark);
+          }
         }
       }
     }
@@ -513,31 +511,41 @@ class _RoomsPainter extends CustomPainter {
     for (final entry in cells.entries) {
       final n = graph.nodeById[entry.key]!;
       final o = entry.value;
-      final archived = n.timeScope == TimeScope.archived;
-      final s = n.kind == NodeKind.entity ? 18.0 : 12.0;
-      final rect = Rect.fromCenter(center: o, width: s, height: s);
       final isSel = n.id == sel;
-      if (isSel) canvas.drawRect(rect.inflate(5), mid);
-      if (brain.matches(n)) canvas.drawRect(rect.inflate(4), Paint()..color = _c2);
+      final hot = isSel || linked.contains(n.id) || brain.matches(n);
+      if (hot) {
+        canvas.drawRect(Rect.fromLTWH(o.dx - 8, o.dy - row / 2 + 1, colWidth - 8, row - 2), isSel ? dark : mid);
+      }
+      final ink = hot ? light : dark;
+      final s = n.kind == NodeKind.entity ? 10.0 : 7.0;
+      final rect = Rect.fromCenter(center: o, width: s, height: s);
       switch (n.kind) {
         case NodeKind.episode:
-          canvas.drawRect(Rect.fromCenter(center: o, width: s, height: s / 3), dark);
-          canvas.drawRect(Rect.fromCenter(center: o, width: s / 3, height: s), dark);
+          canvas.drawRect(Rect.fromCenter(center: o, width: 9, height: 3), ink);
+          canvas.drawRect(Rect.fromCenter(center: o, width: 3, height: 9), ink);
         case NodeKind.reminder:
-          canvas.drawRect(rect, dark);
-          canvas.drawRect(Rect.fromLTWH(o.dx - 1.5, rect.top + 2, 3, s * 0.45), light);
-          canvas.drawRect(Rect.fromLTWH(o.dx - 1.5, rect.bottom - 4, 3, 2.5), light);
+          canvas.drawRect(Rect.fromLTWH(o.dx - 1.5, o.dy - 5, 3, 6), ink);
+          canvas.drawRect(Rect.fromLTWH(o.dx - 1.5, o.dy + 3, 3, 2), ink);
         default:
-          if (archived) {
+          if (n.timeScope == TimeScope.archived) {
             canvas.drawRect(rect, Paint()
               ..style = PaintingStyle.stroke
-              ..strokeWidth = 2
-              ..color = _c1);
+              ..strokeWidth = 1.5
+              ..color = ink.color);
           } else {
-            canvas.drawRect(rect, n.kind == NodeKind.entity ? dark : mid);
-            if (n.kind == NodeKind.entity) canvas.drawRect(Rect.fromCenter(center: o, width: 6, height: 6), light);
+            canvas.drawRect(rect, ink);
           }
       }
+      final tp = TextPainter(
+        text: TextSpan(
+          text: n.kind == NodeKind.entity ? n.label.toUpperCase() : n.label,
+          style: _px(10.5, color: hot ? _c3 : (n.timeScope == TimeScope.archived ? _c1 : _c0), bold: n.kind == NodeKind.entity),
+        ),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+        ellipsis: '…',
+      )..layout(maxWidth: colWidth - 30);
+      tp.paint(canvas, Offset(o.dx + 10, o.dy - tp.height / 2));
     }
   }
 

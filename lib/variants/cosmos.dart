@@ -367,7 +367,7 @@ class _SpaceDogPainter extends CustomPainter {
         final tp = TextPainter(
           text: TextSpan(
               text: 'z',
-              style: TextStyle(color: Colors.white.withValues(alpha: 1 - ph), fontSize: 12 + ph * 10)),
+              style: TextStyle(fontFamily: 'Adwaita Sans', color: Colors.white.withValues(alpha: 1 - ph), fontSize: 12 + ph * 10)),
           textDirection: TextDirection.ltr,
         )..layout();
         tp.paint(canvas, center + Offset(-r * 1.2 - ph * 14, -r * 0.6 - ph * 30));
@@ -376,7 +376,7 @@ class _SpaceDogPainter extends CustomPainter {
     if (bell) {
       canvas.drawCircle(center + Offset(-r * 0.9, -r * 0.85), 9, Paint()..color = const Color(0xFFFF5D5D));
       final tp = TextPainter(
-        text: const TextSpan(text: '!', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+        text: const TextSpan(text: '!', style: TextStyle(fontFamily: 'Adwaita Sans', color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
         textDirection: TextDirection.ltr,
       )..layout();
       tp.paint(canvas, center + Offset(-r * 0.9 - tp.width / 2, -r * 0.85 - tp.height / 2));
@@ -662,6 +662,7 @@ class _SpherePainter extends CustomPainter {
           text: TextSpan(
             text: n.label,
             style: TextStyle(
+              fontFamily: 'Adwaita Sans',
               color: Colors.white.withValues(alpha: isSel ? 1 : 0.4 + 0.5 * depth),
               fontSize: isSel ? 13 : 11,
               shadows: const [Shadow(color: Colors.black, blurRadius: 4)],

@@ -276,10 +276,13 @@ class _BlockDog extends CustomPainter {
 
     // Orejas.
     for (final s in [-1.0, 1.0]) {
+      // Orejas caídas (es perrita, no gato): cuelgan de las esquinas.
+      final swing = asleep ? 0.0 : sin(t * 4) * w * 0.03;
       final ear = Path()
-        ..moveTo(s * w * 0.18, -w * 0.5)
-        ..lineTo(s * w * 0.5, asleep ? -w * 0.42 : -w * 0.85)
-        ..lineTo(s * w * 0.5, -w * 0.38)
+        ..moveTo(s * w * 0.3, -w * 0.45)
+        ..lineTo(s * w * 0.62, -w * 0.4)
+        ..lineTo(s * (w * 0.66 + swing), w * (asleep ? 0.05 : 0.18))
+        ..lineTo(s * (w * 0.46 + swing), w * (asleep ? 0.08 : 0.2))
         ..close();
       canvas.drawPath(ear.shift(const Offset(5, 5)), black);
       canvas.drawPath(ear, Paint()..color = _pink);

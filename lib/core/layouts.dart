@@ -95,7 +95,7 @@ Map<String, Offset> radialLayout(MemoryGraph g, List<MemoryNode> visible, double
     final rest = e.value.where((n) => n.kind != NodeKind.entity).toList();
     for (var i = 0; i < ents.length; i++) {
       final a = base + (i - (ents.length - 1) / 2) * sector * 0.8 / max(1, ents.length);
-      out[ents[i].id] = Offset(cos(a), sin(a)) * (r * 0.6);
+      out[ents[i].id] = Offset(cos(a), sin(a)) * (r * (i.isEven ? 0.55 : 0.67));
     }
     for (var i = 0; i < rest.length; i++) {
       final a = base + (i - (rest.length - 1) / 2) * sector * 0.9 / max(1, rest.length);
@@ -114,7 +114,7 @@ Map<String, Offset> forceLayout(List<MemoryNode> nodes, List<MemoryEdge> edges,
   final anchors = <String, Offset>{};
   for (var i = 0; i < areas.length; i++) {
     final a = 2 * pi * i / areas.length;
-    anchors[areas[i].id] = center + Offset(cos(a) * w * 0.33, sin(a) * h * 0.33);
+    anchors[areas[i].id] = center + Offset(cos(a) * w * 0.3, sin(a) * h * 0.3);
   }
   final pos = <String, Offset>{
     for (final n in nodes)
@@ -155,7 +155,7 @@ Map<String, Offset> forceLayout(List<MemoryNode> nodes, List<MemoryEdge> edges,
       final d = disp[n.id]!;
       final dist = max(0.01, d.distance);
       var p = pos[n.id]! + d / dist * min(dist, temp);
-      p = Offset(p.dx.clamp(40, w - 40), p.dy.clamp(40, h - 40));
+      p = Offset(p.dx.clamp(70, w - 90), p.dy.clamp(70, h - 50));
       pos[n.id] = p;
     }
     temp *= 0.985;
@@ -163,29 +163,32 @@ Map<String, Offset> forceLayout(List<MemoryNode> nodes, List<MemoryEdge> edges,
   return pos;
 }
 
-/// "Cuartos" de una cuadrícula: cada área es un cuarto, sus recuerdos son
-/// casillas dentro. Devuelve el rectángulo de cada área y la casilla de cada nodo.
-({Map<String, Rect> rooms, Map<String, Offset> cells}) roomsLayout(
-    List<Area> areas, List<MemoryNode> visible, Size size, double cell) {
+/// "Cuartos" de una cuadrícula: cada área es un cuarto y sus recuerdos se
+/// listan dentro, uno por renglón (en dos columnas si cabe). Devuelve el
+/// rectángulo de cada área y la posición del ícono de cada nodo.
+({Map<String, Rect> rooms, Map<String, Offset> cells, double colWidth}) roomsLayout(
+    List<Area> areas, List<MemoryNode> visible, Size size, double row) {
   final cols = size.width > size.height ? 5 : 2;
   final rows = (areas.length / cols).ceil();
   final rw = size.width / cols, rh = size.height / rows;
   final rooms = <String, Rect>{};
   final cells = <String, Offset>{};
+  var colWidth = rw;
   for (var i = 0; i < areas.length; i++) {
     final r = Rect.fromLTWH((i % cols) * rw + 6, (i ~/ cols) * rh + 6, rw - 12, rh - 12);
     rooms[areas[i].id] = r;
     final members = visible.where((n) => n.primaryArea == areas[i].id).toList()
       ..sort((a, b) => a.kind.index.compareTo(b.kind.index));
-    final perRow = max(1, ((r.width - 16) / cell).floor());
+    final perCol = max(1, ((r.height - 34) / row).floor());
+    final listCols = members.length > perCol ? 2 : 1;
+    colWidth = (r.width - 12) / listCols;
     for (var j = 0; j < members.length; j++) {
-      cells[members[j].id] = Offset(
-        r.left + 10 + (j % perRow) * cell + cell / 2,
-        r.top + 30 + (j ~/ perRow) * cell + cell / 2,
-      );
+      final c = j ~/ perCol;
+      if (c >= listCols) break; // no cabe: se ve al filtrar por área
+      cells[members[j].id] = Offset(r.left + 14 + c * colWidth, r.top + 34 + (j % perCol) * row + row / 2);
     }
   }
-  return (rooms: rooms, cells: cells);
+  return (rooms: rooms, cells: cells, colWidth: colWidth);
 }
 
 /// Órbitas del tiempo: el ángulo es el área, la distancia al centro es el

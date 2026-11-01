@@ -1,6 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="laika_app"
+        android:label="Laika"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

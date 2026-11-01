@@ -264,10 +264,11 @@ class _BlobDog extends CustomPainter {
     // Orejas caídas.
     for (final s in [-1.0, 1.0]) {
       canvas.save();
-      canvas.translate(s * r * 0.78, -r * 0.35);
-      canvas.rotate(s * (asleep ? 0.5 : 0.25 + 0.05 * sin(t * 2)));
-      canvas.drawOval(Rect.fromCenter(center: Offset(0, r * 0.35), width: r * 0.5, height: r * 0.95),
-          Paint()..shader = const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFD6BCFA), Color(0xFFB794F4)]).createShader(Rect.fromCenter(center: Offset(0, r * 0.35), width: r * 0.5, height: r * 0.95)));
+      canvas.translate(s * r * 0.92, -r * 0.45);
+      canvas.rotate(s * (asleep ? 0.15 : -0.05 + 0.06 * sin(t * 2)));
+      final ear = Rect.fromCenter(center: Offset(0, r * 0.45), width: r * 0.48, height: r * 1.0);
+      canvas.drawOval(ear,
+          Paint()..shader = const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFB794F4), Color(0xFF8B6FD6)]).createShader(ear));
       canvas.restore();
     }
     // Cuerpo-gota.

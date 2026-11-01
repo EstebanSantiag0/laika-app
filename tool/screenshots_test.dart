@@ -89,6 +89,7 @@ void main() {
 
       await tester.tap(agendaTab.first);
       await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
       await expectLater(find.byType(VariantHost), matchesGoldenFile('../docs/screenshots/${v.id}-3-agenda.png'));
 
       await tester.pumpWidget(const SizedBox());

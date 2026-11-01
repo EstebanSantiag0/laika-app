@@ -1,18 +1,29 @@
 # Progreso — retomar aquí
 
-**Fecha:** 2026-11-01 · **Estado:** construyendo 5 prototipos de interfaz con backend simulado.
+**Última actualización:** 2026-11-01 · **Estado:** 5 prototipos listos; esperando que Esteban elija diseño.
 
 ## Hecho
-- Proyecto Flutter (Linux + Android) creado.
-- Núcleo compartido en `lib/core/`: modelos (contrato de la API), backend simulado,
-  lógica de la mascota (se duerme a los 15 s, despierta solo si `/health` responde),
-  escritorio con burbujas al lado de Laika, cerebro y recordatorios.
-- Variante 1: Cosmos (`lib/variants/cosmos.dart`).
+- Proyecto Flutter (Linux + Android). Build de Linux release OK.
+- Núcleo compartido (`lib/core/`): modelos según el contrato real del servidor
+  (W8.1/W8.2), backend simulado, mascota (15 s → dormir; hover → `/health`),
+  burbujas al lado contrario del borde, cerebro con áreas/tiempo, agenda,
+  datos sensibles ocultos.
+- 5 diseños: Cosmos, Papel, Pixel, Brutal, Cristal (`lib/variants/`).
+- 8 pruebas (`flutter test`) y capturas (`docs/screenshots/`).
+- Docs: README paso a paso, architecture, API, VARIANTES, CLAUDE.md, licencia MIT.
 
-## Siguiente
-- Variantes 2–5: Papel, Pixel, Brutal, Cristal.
-- Pruebas de humo, docs (README paso a paso, architecture, API), repo público en GitHub.
+## Esperando a Esteban
+- Elegir diseño o mezcla (plantilla en `docs/VARIANTES.md`).
+- Confirmar la lista de áreas de vida.
+- Para el escritorio real en Linux: `sudo pacman -S gtk-layer-shell`.
+- Para Android: `flutter doctor --android-licenses`.
 
-## Servidor (lo hace la sesión de cc-server)
-Pasos 1–4 enviados el 2026-11-01: recordatorios reales, `/api/graph` + `/api/reminders`,
-memoria por áreas y tiempo, repo público `EstebanSantiag0/laika`.
+## Siguiente (después de elegir)
+1. `HttpLaika` (cliente real: HTTPS + WebSocket, contrato en `docs/API.md`).
+2. Ventana transparente sobre el escritorio (gtk-layer-shell).
+3. Android: burbuja flotante + notificaciones.
+
+## Servidor (sesión de cc-server, rama `w8-reminders-api-areas`)
+- W8.1 recordatorios reales ✅ · W8.2 API de lectura ✅
+- W8.3 áreas de vida + tiempo (Esteban revisa una muestra antes de aplicar) ⏳
+- W8.4 repo público `EstebanSantiag0/laika` (manifiesto + escaneo antes de publicar) ⏳
