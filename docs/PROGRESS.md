@@ -74,4 +74,4 @@
 - **Ajustes** (`core/config.dart` + pestaña Ajustes): skin, tamaño de Laika y servidor → `~/.config/laika/config.json`.
   La mascota `--pet` vigila el archivo (inotify) y cambia al instante.
 - `tool/make_skin.py`: arma una skin desde imágenes propias (recorta y quita el fondo liso).
-- Esperando: que Esteban arme su skin personal con `tool/make_skin.py` y la elija en Ajustes.
+- Esteban va a **dibujar su propio set** de imágenes (la mezcla de fuentes no combinaba). Mientras, la skin es el círculo.

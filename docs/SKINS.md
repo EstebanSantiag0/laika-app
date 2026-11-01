@@ -44,6 +44,17 @@ Una carpeta por skin, con **una imagen por emoción**:
   ponerle nombre o usar archivos con otros nombres.
 - Encima de las imágenes la app agrega solo "zzz", los puntitos de "pensando" y la campanita.
 
+## Consejos para dibujar tu propio set
+
+- Lienzo cuadrado de **512×512 px** con fondo **transparente**, exportado a PNG.
+- Mismo grosor de línea, misma paleta y mismo tamaño de personaje en todas;
+  los pies (o la base) siempre a la **misma altura**, cerca del borde de abajo.
+- Haz primero `neutral` y úsala como plantilla (capa de referencia) para las demás.
+- Deja libre la esquina **superior derecha**: ahí la app dibuja "zzz", "…" y la campanita.
+- Si son pixel art, dibújalas pequeñas y escálalas ×8 o ×16 *sin suavizado* (vecino más cercano).
+- Herramientas en Arch: Krita (`krita`), o LibreSprite/Pixelorama para pixel art.
+- Si ya están con el nombre correcto y fondo transparente, solo cópialas a la carpeta; no hace falta el script.
+
 ## Crear una skin con tus imágenes
 
 `tool/make_skin.py` quita el fondo liso, recorta y deja cada imagen en 512×512 transparente:
