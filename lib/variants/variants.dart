@@ -3,7 +3,11 @@
 
 import '../core/session.dart';
 import 'cosmos.dart';
+import 'papel.dart';
+import 'pixel.dart';
 
 final allVariants = <VariantSpec>[
   cosmosSpec,
+  papelSpec,
+  pixelSpec,
 ];

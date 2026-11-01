@@ -178,6 +178,9 @@ class PetController extends ChangeNotifier {
         this.typing = typing;
       case BubbleEvent(:final text):
         if (isAwake) _addBubble(text);
+      case ReminderEvent(:final reminder) when !e.isDue:
+        // Creado, hecho o pospuesto: no hay que avisar nada.
+        pendingReminders.removeWhere((r) => r.id == reminder.id);
       case ReminderEvent(:final reminder):
         if (isAwake) {
           _addBubble('⏰ Recordatorio: ${reminder.text}');

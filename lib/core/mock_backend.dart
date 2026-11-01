@@ -73,6 +73,8 @@ class MockLaika implements LaikaApi {
     await _net();
     final r = _reminders.firstWhere((r) => r.id == id);
     r.status = ReminderStatus.done;
+    r.doneAt = DateTime.now();
+    _events.add(ReminderEvent(r));
     _replaceNode(reminderNode(r));
   }
 
@@ -81,7 +83,9 @@ class MockLaika implements LaikaApi {
     await _net();
     final r = _reminders.firstWhere((r) => r.id == id);
     r.status = ReminderStatus.snoozed;
+    r.snoozes++;
     r.dueAt = DateTime.now().add(Duration(minutes: minutes));
+    _events.add(ReminderEvent(r));
     _replaceNode(reminderNode(r));
   }
 
@@ -100,6 +104,7 @@ class MockLaika implements LaikaApi {
       final due = r.status == ReminderStatus.pending || r.status == ReminderStatus.snoozed;
       if (due && !r.dueAt.isAfter(now)) {
         r.status = ReminderStatus.delivered;
+        r.deliveredAt = now;
         _events.add(ReminderEvent(r));
       }
     }
@@ -187,8 +192,10 @@ class MockLaika implements LaikaApi {
       text: label,
       dueAt: DateTime.now().add(const Duration(minutes: 1)),
       areas: [_guessArea(clean)],
+      createdAt: DateTime.now(),
     );
     _reminders.add(r);
+    _events.add(ReminderEvent(r));
     _addNode(reminderNode(r));
     return [
       '¡Claro! Te lo recuerdo.',

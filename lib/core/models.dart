@@ -220,6 +220,12 @@ class Reminder {
     required this.dueAt,
     this.status = ReminderStatus.pending,
     this.areas = const [],
+    this.sourceMessageId,
+    this.timeDefaulted = false,
+    this.createdAt,
+    this.deliveredAt,
+    this.doneAt,
+    this.snoozes = 0,
   });
 
   final int id;
@@ -227,6 +233,16 @@ class Reminder {
   DateTime dueAt;
   ReminderStatus status;
   final List<String> areas;
+
+  /// Mensaje del chat donde se pidió.
+  final int? sourceMessageId;
+
+  /// true si no dijiste hora y el servidor eligió la de por defecto (10:00).
+  final bool timeDefaulted;
+  final DateTime? createdAt;
+  DateTime? deliveredAt;
+  DateTime? doneAt;
+  int snoozes;
 
   bool get isOpen =>
       status == ReminderStatus.pending ||
@@ -239,6 +255,12 @@ class Reminder {
         dueAt: _date(j['due_at']) ?? DateTime.now(),
         status: ReminderStatus.parse(j['status'] as String?),
         areas: (j['areas'] as List?)?.cast<String>() ?? const [],
+        sourceMessageId: j['source_message_id'] as int?,
+        timeDefaulted: j['time_defaulted'] == true,
+        createdAt: _date(j['created_at']),
+        deliveredAt: _date(j['delivered_at']),
+        doneAt: _date(j['done_at']),
+        snoozes: (j['snoozes'] as int?) ?? 0,
       );
 
   Map<String, dynamic> toJson() => {
@@ -247,6 +269,12 @@ class Reminder {
         'due_at': dueAt.toIso8601String(),
         'status': status.wire,
         'areas': areas,
+        'source_message_id': sourceMessageId,
+        'time_defaulted': timeDefaulted,
+        'created_at': createdAt?.toIso8601String(),
+        'delivered_at': deliveredAt?.toIso8601String(),
+        'done_at': doneAt?.toIso8601String(),
+        'snoozes': snoozes,
       };
 }
 
@@ -286,10 +314,15 @@ class BubbleEvent extends LaikaEvent {
   final String text;
 }
 
-/// Llegó la hora de un recordatorio.
+/// Cambió un recordatorio. El servidor manda este evento al crearlo,
+/// al avisarlo (status=delivered), al marcarlo hecho y al posponerlo:
+/// {"type":"reminder","origin":"app","reminder":{...}}
 class ReminderEvent extends LaikaEvent {
   const ReminderEvent(this.reminder);
   final Reminder reminder;
+
+  /// ¿Es el aviso de que llegó la hora?
+  bool get isDue => reminder.status == ReminderStatus.delivered;
 }
 
 /// Laika guardó (o cambió) algo en su memoria.
