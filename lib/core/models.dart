@@ -87,10 +87,23 @@ class MemoryNode {
     this.dueAt,
     this.importance = 0.5,
     required this.createdAt,
+    this.subkind,
+    this.sensitive = false,
+    this.status,
   });
 
   final String id;
   final NodeKind kind;
+
+  /// Entidades: person|place|thing|topic|work. Datos: identity|habit|opinion|
+  /// event|goal|preference|relationship|language|worry|us|laika_self.
+  final String? subkind;
+
+  /// Dato sensible: en pantalla se muestra oculto (ver BrainController.hideSensitive).
+  final bool sensitive;
+
+  /// Solo recordatorios: pending|delivered|snoozed|done.
+  final String? status;
   final String label;
   final String text;
   final List<String> areas;
@@ -117,6 +130,27 @@ class MemoryNode {
         dueAt: _date(j['due_at']),
         importance: (j['importance'] as num?)?.toDouble() ?? 0.5,
         createdAt: _date(j['created_at']) ?? DateTime.now(),
+        subkind: j['subkind'] as String?,
+        sensitive: j['sensitive'] == true,
+        status: j['status'] as String?,
+      );
+
+  /// Copia con la etiqueta y el texto ocultos (para datos sensibles).
+  MemoryNode masked() => MemoryNode(
+        id: id,
+        kind: kind,
+        label: '🔒 privado',
+        text: 'Dato sensible: oculto en pantalla. Actívalo en el panel si estás solo.',
+        areas: areas,
+        timeScope: timeScope,
+        validFrom: validFrom,
+        validTo: validTo,
+        dueAt: dueAt,
+        importance: importance,
+        createdAt: createdAt,
+        subkind: subkind,
+        sensitive: true,
+        status: status,
       );
 
   Map<String, dynamic> toJson() => {
@@ -131,6 +165,9 @@ class MemoryNode {
         'due_at': dueAt?.toIso8601String(),
         'importance': importance,
         'created_at': createdAt.toIso8601String(),
+        'subkind': subkind,
+        'sensitive': sensitive,
+        'status': status,
       };
 }
 

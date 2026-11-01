@@ -33,6 +33,10 @@ class BrainController extends ChangeNotifier {
   bool showArchived = false;
   String query = '';
 
+  /// Oculta los datos marcados como sensibles (por si alguien ve tu pantalla).
+  bool hideSensitive = true;
+  MemoryGraph? _raw;
+
   /// Para que los dibujos sepan cuándo recalcular la posición de los nodos.
   int version = 0;
 
@@ -40,13 +44,30 @@ class BrainController extends ChangeNotifier {
     loading = true;
     notifyListeners();
     try {
-      graph = await api.graph(all: true);
+      _raw = await api.graph(all: true);
+      graph = _masked(_raw!);
       error = null;
       version++;
     } catch (e) {
       error = '$e';
     }
     loading = false;
+    notifyListeners();
+  }
+
+  MemoryGraph _masked(MemoryGraph g) => !hideSensitive
+      ? g
+      : MemoryGraph(
+          generatedAt: g.generatedAt,
+          areas: g.areas,
+          nodes: [for (final n in g.nodes) n.sensitive ? n.masked() : n],
+          edges: g.edges,
+        );
+
+  void setHideSensitive(bool v) {
+    hideSensitive = v;
+    if (_raw != null) graph = _masked(_raw!);
+    version++;
     notifyListeners();
   }
 

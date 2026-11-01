@@ -75,7 +75,7 @@ class _VariantHostState extends State<VariantHost> {
       textDirection: TextDirection.ltr,
       child: Stack(
         children: [
-          Positioned.fill(child: widget.spec.build(session)),
+          Positioned.fill(child: SessionScope(session: session, child: widget.spec.build(session))),
           Positioned(
             left: 10,
             bottom: 10,
@@ -85,6 +85,18 @@ class _VariantHostState extends State<VariantHost> {
       ),
     );
   }
+}
+
+/// Da acceso a la sesión desde cualquier widget (y desde las pruebas).
+class SessionScope extends InheritedWidget {
+  const SessionScope({super.key, required this.session, required super.child});
+  final LaikaSession session;
+
+  static LaikaSession? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<SessionScope>()?.session;
+
+  @override
+  bool updateShouldNotify(SessionScope oldWidget) => oldWidget.session != session;
 }
 
 /// Panel neutro (igual en todas las variantes) para simular el servidor.

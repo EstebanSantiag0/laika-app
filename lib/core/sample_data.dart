@@ -48,7 +48,8 @@ MemoryGraph buildSampleGraph(DateTime now) {
       int ageDays = 10,
       DateTime? validTo,
       DateTime? dueAt,
-      double imp = 0.5}) {
+      double imp = 0.5,
+      bool sensitive = false}) {
     final id = 'fact:${++factN}';
     nodes.add(MemoryNode(
       id: id,
@@ -62,6 +63,7 @@ MemoryGraph buildSampleGraph(DateTime now) {
       dueAt: dueAt,
       importance: imp,
       createdAt: d(-ageDays),
+      sensitive: sensitive,
     ));
     if (about != null) {
       edges.add(MemoryEdge(source: id, target: 'entity:$about', kind: 'about', weight: 0.9));
@@ -120,7 +122,8 @@ MemoryGraph buildSampleGraph(DateTime now) {
   fact('Diego quiere ir al próximo hackathon', ['people', 'projects'], TimeScope.stage, about: 'diego', ageDays: 2);
   fact('Hablas con tu mamá los domingos', ['people'], TimeScope.permanent, about: 'mama', ageDays: 30);
   fact('Vas al gimnasio lunes, miércoles y viernes', ['health'], TimeScope.stage, about: 'gym', ageDays: 14);
-  fact('Dormiste mal toda la semana de exámenes', ['health'], TimeScope.archived, ageDays: 35, validTo: d(-28));
+  fact('Dormiste mal toda la semana de exámenes', ['health'], TimeScope.archived, ageDays: 35, validTo: d(-28), sensitive: true);
+  fact('Te preocupa pagar la colegiatura', ['finance'], TimeScope.stage, ageDays: 6, sensitive: true);
   fact('Aprendiste tu primera canción en guitarra', ['skills'], TimeScope.permanent, about: 'guitarra', ageDays: 12);
   fact('Querías estudiar alemán', ['languages'], TimeScope.archived, ageDays: 120, validTo: d(-90), text: 'Lo dejaste para enfocarte en chino. Se guarda como historia.');
   fact('Buscabas departamento cerca de la uni', ['home', 'finance'], TimeScope.archived, ageDays: 150, validTo: d(-100));
@@ -149,7 +152,7 @@ MemoryGraph buildSampleGraph(DateTime now) {
       'Hablaron de qué empresas buscar y de mejorar el CV.');
   episode('3', 'Práctica: pedir comida en chino', ['languages'], 7,
       ['fact:12', 'fact:13'], 'Simularon un restaurante: tú pedías y Laika era la mesera.');
-  episode('4', 'Domingo tranquilo', ['people', 'home'], 4, ['fact:17', 'fact:20'],
+  episode('4', 'Domingo tranquilo', ['people', 'home'], 4, ['fact:17', 'fact:21'],
       'Hablaste con tu mamá y practicaste guitarra.');
   episode('5', 'Idea: la app de Laika', ['projects'], 0, ['fact:15'],
       'Decidiste que Laika tenga una mascota de escritorio y un cerebro visible.');
