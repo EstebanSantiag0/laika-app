@@ -3,19 +3,21 @@
 
 import 'package:flutter/material.dart';
 
+import 'api.dart';
 import 'brain.dart';
 import 'mock_backend.dart';
 import 'models.dart';
 import 'pet.dart';
 
 class LaikaSession {
-  LaikaSession() : api = MockLaika() {
-    pet = PetController(api);
-    brain = BrainController(api);
-    reminders = RemindersController(api);
+  /// Sin [api] usa el servidor simulado.
+  LaikaSession([LaikaApi? api]) : api = api ?? MockLaika() {
+    pet = PetController(this.api);
+    brain = BrainController(this.api);
+    reminders = RemindersController(this.api);
   }
 
-  final MockLaika api;
+  final LaikaApi api;
   late final PetController pet;
   late final BrainController brain;
   late final RemindersController reminders;
@@ -115,6 +117,7 @@ class _SimPanelState extends State<SimPanel> {
   @override
   Widget build(BuildContext context) {
     final api = widget.session.api;
+    if (api is! MockLaika) return const SizedBox.shrink();
     final style = const TextStyle(color: Colors.white, fontSize: 12, fontFamily: 'Hack', decoration: TextDecoration.none);
     return Material(
       color: Colors.transparent,

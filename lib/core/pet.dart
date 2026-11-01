@@ -195,7 +195,18 @@ class PetController extends ChangeNotifier {
     _notify();
   }
 
+  bool _composing = false;
+
+  /// La caja de texto tiene algo escrito (o se vació).
+  void composing(bool active) {
+    if (active == _composing) return;
+    _composing = active;
+    api.composing(active);
+    if (active) touch();
+  }
+
   Future<void> send(String text) async {
+    composing(false);
     text = text.trim();
     if (text.isEmpty || !isAwake) return;
     lastMine = text;

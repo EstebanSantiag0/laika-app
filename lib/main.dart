@@ -1,17 +1,46 @@
-// Laika — prototipos de interfaz.
+// Laika — cliente de escritorio y Android.
 //
-// Abre una galería con las variantes de diseño. Cada una usa el mismo
-// backend simulado y la misma lógica; solo cambia el estilo.
+//   laika_app --pet    → Laika sobre tu escritorio (ventana transparente, Linux/Wayland)
+//   laika_app --app    → la app completa: cerebro, agenda y mascota
+//   laika_app          → galería de prototipos de diseño
 //
-//   flutter run -d linux                          → galería
+//   flutter run -d linux -a --pet
 //   flutter run -d linux --dart-define=VARIANT=pixel → directo a una variante
+//
+// Servidor: --dart-define=LAIKA_SERVER=…, variable LAIKA_SERVER o
+// ~/.config/laika/config.json. Sin servidor se usa el simulado.
 
 import 'package:flutter/material.dart';
 
+import 'core/http_laika.dart';
 import 'core/session.dart';
+import 'desktop/pet_overlay.dart';
+import 'desktop/window_bridge.dart';
+import 'variants/laika.dart';
 import 'variants/variants.dart';
 
-void main() => runApp(const LaikaPrototypes());
+Future<void> main(List<String> args) async {
+  WidgetsFlutterBinding.ensureInitialized();
+  LaikaSession session() {
+    final url = laikaServerUrl();
+    return LaikaSession(url == null ? null : HttpLaika(url));
+  }
+
+  if (args.contains('--pet')) {
+    if (await WindowBridge.isPetMode()) {
+      runApp(PetOverlay(session: session()));
+      return;
+    }
+    // Sin capa transparente (X11 o sin gtk-layer-shell): la mascota en una ventana normal.
+    runApp(LaikaApp(session: session(), initialTab: 0));
+    return;
+  }
+  if (args.contains('--app')) {
+    runApp(LaikaApp(session: session(), showDesktop: false));
+    return;
+  }
+  runApp(const LaikaPrototypes());
+}
 
 class LaikaPrototypes extends StatefulWidget {
   const LaikaPrototypes({super.key, this.initial});

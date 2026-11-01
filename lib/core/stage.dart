@@ -44,13 +44,17 @@ abstract class PetSkin {
 }
 
 class PetStage extends StatefulWidget {
-  const PetStage({super.key, required this.controller, required this.skin, this.onOpenApp});
+  const PetStage({super.key, required this.controller, required this.skin, this.onOpenApp, this.onRegions});
 
   final PetController controller;
   final PetSkin skin;
 
   /// Doble clic sobre Laika: abre la app completa (cerebro, agenda…).
   final VoidCallback? onOpenApp;
+
+  /// Zonas de la pantalla ocupadas por Laika y su chat. En el escritorio real
+  /// solo esas zonas reciben clics; el resto pasa a las ventanas de abajo.
+  final ValueChanged<List<Rect>>? onRegions;
 
   @override
   State<PetStage> createState() => _PetStageState();
@@ -66,10 +70,43 @@ class _PetStageState extends State<PetStage> with SingleTickerProviderStateMixin
 
   PetController get c => widget.controller;
 
+  final _petKey = GlobalKey();
+  final _chatKey = GlobalKey();
+  final _statusKey = GlobalKey();
+  List<Rect> _lastRegions = const [];
+
   @override
   void initState() {
     super.initState();
     c.addListener(_changed);
+    _text.addListener(() => c.composing(_text.text.trim().isNotEmpty));
+    _focus.addListener(() {
+      if (!_focus.hasFocus) c.composing(false);
+    });
+  }
+
+  void _reportRegions() {
+    final cb = widget.onRegions;
+    if (cb == null || !mounted) return;
+    final rects = <Rect>[];
+    for (final k in [_petKey, _chatKey, _statusKey]) {
+      final box = k.currentContext?.findRenderObject();
+      if (box is RenderBox && box.hasSize && box.size.width > 1 && box.size.height > 1) {
+        rects.add((box.localToGlobal(Offset.zero) & box.size).inflate(4));
+      }
+    }
+    // El chat solo cuenta si está visible.
+    if (!c.isAwake && rects.length > 1) rects.removeAt(1);
+    bool same(List<Rect> a, List<Rect> b) {
+      if (a.length != b.length) return false;
+      for (var i = 0; i < a.length; i++) {
+        if ((a[i].topLeft - b[i].topLeft).distance > 1 || (a[i].size - b[i].size as Offset).distance > 1) return false;
+      }
+      return true;
+    }
+    if (same(rects, _lastRegions)) return;
+    _lastRegions = rects;
+    cb(rects);
   }
 
   bool _wasOpen = false;
@@ -102,6 +139,7 @@ class _PetStageState extends State<PetStage> with SingleTickerProviderStateMixin
   @override
   Widget build(BuildContext context) {
     final skin = widget.skin;
+    if (widget.onRegions != null) WidgetsBinding.instance.addPostFrameCallback((_) => _reportRegions());
     return LayoutBuilder(builder: (context, box) {
       final w = box.maxWidth, h = box.maxHeight;
       final size = skin.petSize;
@@ -121,6 +159,7 @@ class _PetStageState extends State<PetStage> with SingleTickerProviderStateMixin
           child: MouseRegion(
             onHover: (_) => c.touch(),
             child: SizedBox(
+              key: _chatKey,
               width: chatW,
               child: AnimatedBuilder(
                 animation: _anim,
@@ -181,6 +220,7 @@ class _PetStageState extends State<PetStage> with SingleTickerProviderStateMixin
             width: size,
             height: size,
             child: MouseRegion(
+              key: _petKey,
               cursor: SystemMouseCursors.grab,
               onEnter: (_) => c.hover(),
               onHover: (_) => c.touch(),
@@ -207,8 +247,10 @@ class _PetStageState extends State<PetStage> with SingleTickerProviderStateMixin
               child: AnimatedBuilder(
                 animation: _anim,
                 builder: (context, _) => Center(
-                  child: skin.status(context, c, _watch.elapsedMilliseconds / 1000) ??
-                      const SizedBox.shrink(),
+                  child: KeyedSubtree(
+                    key: _statusKey,
+                    child: skin.status(context, c, _watch.elapsedMilliseconds / 1000) ?? const SizedBox.shrink(),
+                  ),
                 ),
               ),
             ),

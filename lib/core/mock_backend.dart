@@ -275,6 +275,9 @@ class MockLaika implements LaikaApi {
   }
 
   @override
+  void composing(bool active) {}
+
+  @override
   void dispose() {
     _ticker.cancel();
     _events.close();
