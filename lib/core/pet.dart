@@ -29,6 +29,9 @@ enum PetState {
   thinking,
 }
 
+/// Cómo duerme: primero sentada (cabeceando) y, 15 s después, acostada.
+enum SleepPose { seated, lying }
+
 class Bubble {
   Bubble(this.text) : at = DateTime.now(), id = _n++;
   static int _n = 0;
@@ -58,6 +61,13 @@ class PetController extends ChangeNotifier {
   PetState get state => _state;
   bool get isAwake => _state == PetState.awake || _state == PetState.thinking;
 
+  /// Postura mientras duerme. Al arrancar la app ya está acostada.
+  SleepPose sleepPose = SleepPose.lying;
+
+  /// La caja de texto está abierta (se abre con UN clic sobre Laika).
+  bool chatOpen = false;
+  bool _openAfterWake = false;
+
   /// Burbujas de Laika (las más recientes al final). Máximo [maxBubbles].
   final List<Bubble> bubbles = [];
   static const maxBubbles = 4;
@@ -81,6 +91,7 @@ class PetController extends ChangeNotifier {
 
   late final StreamSubscription<LaikaEvent> _sub;
   Timer? _idleTimer;
+  Timer? _deepTimer;
   Timer? _flashTimer;
   bool _checking = false;
   bool _disposed = false;
@@ -94,8 +105,28 @@ class PetController extends ChangeNotifier {
     }
   }
 
-  /// Tocar/clic sobre Laika (en Android no hay "hover").
-  void poke() => hover();
+  /// Un clic sobre Laika: abre la caja de texto (si está dormida, primero
+  /// intenta despertarla y la abre solo si el servidor responde).
+  void poke() {
+    if (_state == PetState.asleep) {
+      _openAfterWake = true;
+      _tryWake();
+    } else {
+      openChat();
+    }
+  }
+
+  void openChat() {
+    if (!isAwake) return;
+    chatOpen = true;
+    touch();
+    _notify();
+  }
+
+  void closeChat() {
+    chatOpen = false;
+    _notify();
+  }
 
   /// Cualquier interacción: reinicia la cuenta de 15 s.
   void touch() {
@@ -115,7 +146,16 @@ class PetController extends ChangeNotifier {
 
   void sleep() {
     _idleTimer?.cancel();
+    _deepTimer?.cancel();
     _state = PetState.asleep;
+    sleepPose = SleepPose.seated;
+    chatOpen = false;
+    // Otros 15 s sin interacción: se acuesta.
+    _deepTimer = Timer(idle, () {
+      if (_state != PetState.asleep) return;
+      sleepPose = SleepPose.lying;
+      _notify();
+    });
     bubbles.clear();
     lastMine = null;
     typing = false;
@@ -138,7 +178,9 @@ class PetController extends ChangeNotifier {
     _checking = false;
     if (_disposed) return;
     if (ok) {
+      _deepTimer?.cancel();
       _state = PetState.awake;
+      if (_openAfterWake) chatOpen = true;
       for (final r in pendingReminders) {
         _addBubble('⏰ Recordatorio: ${r.text}');
       }
@@ -149,6 +191,7 @@ class PetController extends ChangeNotifier {
       wakeFailed = true;
       _flash(() => wakeFailed = false);
     }
+    _openAfterWake = false;
     _notify();
   }
 
@@ -218,6 +261,7 @@ class PetController extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _idleTimer?.cancel();
+    _deepTimer?.cancel();
     _flashTimer?.cancel();
     _sub.cancel();
     super.dispose();

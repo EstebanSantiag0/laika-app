@@ -44,10 +44,13 @@ abstract class PetSkin {
 }
 
 class PetStage extends StatefulWidget {
-  const PetStage({super.key, required this.controller, required this.skin});
+  const PetStage({super.key, required this.controller, required this.skin, this.onOpenApp});
 
   final PetController controller;
   final PetSkin skin;
+
+  /// Doble clic sobre Laika: abre la app completa (cerebro, agenda…).
+  final VoidCallback? onOpenApp;
 
   @override
   State<PetStage> createState() => _PetStageState();
@@ -69,8 +72,15 @@ class _PetStageState extends State<PetStage> with SingleTickerProviderStateMixin
     c.addListener(_changed);
   }
 
+  bool _wasOpen = false;
+
   void _changed() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    if (c.chatOpen && !_wasOpen) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _focus.requestFocus());
+    }
+    _wasOpen = c.chatOpen;
+    setState(() {});
   }
 
   @override
@@ -141,7 +151,8 @@ class _PetStageState extends State<PetStage> with SingleTickerProviderStateMixin
                           padding: const EdgeInsets.only(bottom: 6),
                           child: skin.mine(context, c.lastMine!, petOnRight: petOnRight),
                         ),
-                      skin.input(context, _text, _focus, _send, petOnRight: petOnRight),
+                      // Un clic sobre Laika abre la caja; si no, solo se ven sus mensajes.
+                      if (c.chatOpen) skin.input(context, _text, _focus, _send, petOnRight: petOnRight),
                     ],
                   );
                 },
@@ -174,10 +185,8 @@ class _PetStageState extends State<PetStage> with SingleTickerProviderStateMixin
               onEnter: (_) => c.hover(),
               onHover: (_) => c.touch(),
               child: GestureDetector(
-                onTap: () {
-                  c.poke();
-                  if (c.isAwake) _focus.requestFocus();
-                },
+                onTap: c.poke,
+                onDoubleTap: widget.onOpenApp,
                 onPanUpdate: (d) => setState(() {
                   _pos = _clamp(pos + d.delta, w, h, size);
                   c.touch();

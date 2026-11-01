@@ -51,6 +51,12 @@ void main() {
       await mouse.moveTo(tester.getCenter(petBox));
       await tester.pump(const Duration(seconds: 1));
       expect(c.state, PetState.awake);
+      expect(c.chatOpen, isFalse, reason: 'despertar no abre la caja de texto');
+
+      // Un clic abre la caja de texto.
+      await tester.tap(petBox);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(c.chatOpen, isTrue);
 
       // Escribir y enviar.
       await tester.enterText(find.byType(TextField).first, 'hola');
@@ -68,6 +74,10 @@ void main() {
       await mouse.moveTo(const Offset(5, 5));
       await tester.pump(const Duration(seconds: 16));
       expect(c.state, PetState.asleep);
+      expect(c.sleepPose, SleepPose.seated, reason: 'a los 15 s duerme sentada');
+      expect(c.chatOpen, isFalse);
+      await tester.pump(const Duration(seconds: 16));
+      expect(c.sleepPose, SleepPose.lying, reason: '15 s después se acuesta');
 
       // Servidor caído → al pasar el mouse sigue dormida.
       (c.api as MockLaika).online = false;
