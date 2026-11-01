@@ -32,6 +32,47 @@ enum PetState {
 /// Cómo duerme: primero sentada (cabeceando) y, 15 s después, acostada.
 enum SleepPose { seated, lying }
 
+/// La cara y la postura de Laika. Las de "reacción" duran unos segundos.
+enum Mood {
+  neutral('Tranquila', 'despierta, sin nada que hacer'),
+  happy('Contenta', 'cuando te contesta'),
+  greeting('Saludando', 'al despertar o cuando dice "hola"'),
+  laughing('Muerta de risa', 'jaja, lol, 😂'),
+  inLove('Enamorada', '❤️, te quiero'),
+  surprised('Sorprendida', 'cuando suena un recordatorio'),
+  impressed('Impresionada', 'cuando aprende algo nuevo, wow, increíble'),
+  doubting('Dudando', '🤔, hmm, no estoy segura'),
+  ashamed('Apenada', 'cuando algo le sale mal'),
+  crying('Llorando', '😭, qué triste'),
+  scheming('Tramando algo', 'cuando anota un recordatorio, 😈'),
+  cheeky('Traviesa', 'cuando te corrige, 😜'),
+  thinking('Pensando', 'mientras escribe su respuesta'),
+  waking('Despertando', 'preguntando a /health'),
+  sleeping('Dormida', 'tras 15 s sentada; 15 s después, acostada');
+
+  const Mood(this.label, this.when);
+  final String label;
+  final String when;
+
+  /// Reacción a un mensaje de Laika (por palabras y emojis).
+  static Mood forText(String text) {
+    final s = text.toLowerCase();
+    bool has(String pattern) => RegExp(pattern, unicode: true).hasMatch(s);
+    if (s.startsWith('⚠️')) return Mood.ashamed;
+    if (s.startsWith('✏️')) return Mood.cheeky;
+    if (s.startsWith('⏰')) return Mood.surprised;
+    if (has(r'😈|😏|muaha|fufu')) return Mood.scheming;
+    if (has(r'😂|🤣|😆|\b(ja){2,}|\b(ha){2,}|\blol\b|\bxd\b|哈哈|ахах')) return Mood.laughing;
+    if (has(r'❤|💕|💖|🥰|😍|te quiero|te amo|love you')) return Mood.inLove;
+    if (has(r'😭|😢|🥺|qué triste|que triste|so sad')) return Mood.crying;
+    if (has(r'😜|😛|😝|:p\b')) return Mood.cheeky;
+    if (has(r'🤔|\bhmm+|no estoy segura|not sure')) return Mood.doubting;
+    if (has(r'😮|😲|🤩|\bwow\b|increíble|impresionante|amazing|bien hecho|well done')) return Mood.impressed;
+    if (has(r'^(¡?hola|hi\b|hey\b|hello|buen(os|as) (días|tardes|noches)|привет|你好)')) return Mood.greeting;
+    return Mood.happy;
+  }
+}
+
 class Bubble {
   Bubble(this.text) : at = DateTime.now(), id = _n++;
   static int _n = 0;
@@ -88,6 +129,29 @@ class PetController extends ChangeNotifier {
 
   /// Algo que Laika acaba de guardar en su memoria (aviso breve).
   MemoryNode? justLearned;
+
+  Mood? _reaction;
+  Timer? _reactionTimer;
+
+  /// Cómo se ve ahora (ver [Mood]).
+  Mood get mood => switch (_state) {
+        PetState.asleep => Mood.sleeping,
+        PetState.waking => Mood.waking,
+        PetState.thinking => _reaction ?? Mood.thinking,
+        PetState.awake => _reaction ?? (typing ? Mood.thinking : Mood.neutral),
+      };
+
+  /// Pone una cara unos segundos (luego vuelve a la normal).
+  void react(Mood m, [Duration d = const Duration(milliseconds: 3500)]) {
+    if (!isAwake) return;
+    _reaction = m;
+    _reactionTimer?.cancel();
+    _reactionTimer = Timer(d, () {
+      _reaction = null;
+      _notify();
+    });
+    _notify();
+  }
 
   late final StreamSubscription<LaikaEvent> _sub;
   Timer? _idleTimer;
@@ -159,6 +223,8 @@ class PetController extends ChangeNotifier {
     bubbles.clear();
     lastMine = null;
     typing = false;
+    _reaction = null;
+    _reactionTimer?.cancel();
     _notify();
   }
 
@@ -186,6 +252,7 @@ class PetController extends ChangeNotifier {
       }
       pendingReminders.clear();
       touch();
+      react(Mood.greeting);
     } else {
       _state = PetState.asleep;
       wakeFailed = true;
@@ -231,19 +298,25 @@ class PetController extends ChangeNotifier {
       case TypingEvent(:final typing):
         this.typing = typing;
       case BubbleEvent(:final text):
-        if (isAwake) _addBubble(text);
+        if (isAwake) {
+          _addBubble(text);
+          react(Mood.forText(text));
+        }
       case ReminderEvent(:final reminder) when !e.isDue:
         // Creado, hecho o pospuesto: no hay que avisar nada.
         pendingReminders.removeWhere((r) => r.id == reminder.id);
+        if (reminder.status == ReminderStatus.pending && reminder.snoozes == 0) react(Mood.scheming);
       case ReminderEvent(:final reminder):
         if (isAwake) {
           _addBubble('⏰ Recordatorio: ${reminder.text}');
+          react(Mood.surprised);
         } else {
           pendingReminders.add(reminder);
         }
       case MemoryEvent(:final node):
         justLearned = node;
         _flash(() => justLearned = null, const Duration(seconds: 4));
+        react(Mood.impressed);
     }
     touch();
     _notify();
@@ -274,6 +347,7 @@ class PetController extends ChangeNotifier {
     _idleTimer?.cancel();
     _deepTimer?.cancel();
     _flashTimer?.cancel();
+    _reactionTimer?.cancel();
     _sub.cancel();
     super.dispose();
   }

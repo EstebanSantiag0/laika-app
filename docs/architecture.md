@@ -49,6 +49,26 @@ muestra y envía.
 - No se duerme mientras espera una respuesta.
 - Si el servidor deja de responder a media plática, se duerme.
 
+### Emociones (`Mood`)
+
+`PetController.mood` dice qué cara pone Laika; `pets/laika_pet.dart` la dibuja
+(todo con `CustomPainter`, en una caja de 100×100).
+
+| Estado / evento | Cara |
+|---|---|
+| dormida (15 s) → acostada en su cojín (30 s) | `sleeping` |
+| preguntando a `/health` | `waking` |
+| despierta sin nada que hacer | `neutral` |
+| esperando su respuesta / ella escribe | `thinking` |
+| despierta bien | `greeting` (3.5 s) |
+| llega una burbuja | `Mood.forText(texto)`: `laughing`, `inLove`, `crying`, `cheeky`, `doubting`, `impressed`, `scheming`, `greeting` o `happy` |
+| corrección (`✏️`) / error (`⚠️`) | `cheeky` / `ashamed` |
+| suena un recordatorio | `surprised` |
+| se crea un recordatorio | `scheming` |
+| aprendió algo (evento de memoria) | `impressed` |
+
+Las reacciones duran 3.5 s y luego vuelve a `neutral`.
+
 ## El escritorio (`PetStage`)
 
 - En los prototipos y en `--app` el "escritorio" se simula dentro de la ventana;

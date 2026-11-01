@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:laika_app/core/session.dart';
 import 'package:laika_app/core/stage.dart';
 import 'package:laika_app/main.dart';
+import 'package:laika_app/variants/laika.dart';
 import 'package:laika_app/variants/variants.dart';
 
 final _flutterRoot = File(Platform.resolvedExecutable).parent.parent.parent.parent.parent.parent.path;
@@ -93,15 +94,23 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       await expectLater(find.byType(VariantHost), matchesGoldenFile('../docs/screenshots/${v.id}-3-agenda.png'));
 
-      if (v.id == 'laika') {
-        await tester.tap(find.text('Mascota'));
-        await tester.pump(const Duration(seconds: 1));
-        await tester.pump(const Duration(seconds: 1));
-        await expectLater(find.byType(VariantHost), matchesGoldenFile('../docs/screenshots/laika-4-mascotas.png'));
-      }
-
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 1));
     });
   }
+
+  testWidgets('capturas: emociones de Laika', (tester) async {
+    tester.view.physicalSize = const Size(1280, 1060);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(fontFamily: 'Adwaita Sans'),
+      home: const Scaffold(body: Stack(children: [Positioned.fill(child: Aurora()), Positioned.fill(child: MoodSheet())])),
+    ));
+    await tester.pump(const Duration(milliseconds: 700));
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('../docs/screenshots/laika-4-emociones.png'));
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 1));
+  });
 }

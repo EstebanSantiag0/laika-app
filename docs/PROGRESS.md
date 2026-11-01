@@ -53,6 +53,15 @@
 - Elegir mascota: cabeza / chibi / cachorro.
 - W8.4: aprobar la publicación de `EstebanSantiag0/laika` (el servidor) y que se cree el repo vacío.
 
+## 2026-11-01 (noche, 2) — nueva mascota
+- Esteban rechazó las 3 mascotas y dejó 13 referencias de Kuromi (emociones) en `~/Pictures/Screenshots/kuromi*.png`.
+  Kuromi es de Sanrio y el repo es público → se hizo **un diseño original** con esas emociones:
+  `lib/pets/laika_pet.dart` (capucha con orejas de murciélago, luna, nariz de perrito, gorguera lila, cola-corazón).
+- 15 `Mood` en `core/pet.dart` + reacciones automáticas (`Mood.forText`, recordatorios, memoria).
+- Pestaña "Mascota" → "Emociones" (hoja con todas las caras). Captura: `docs/screenshots/laika-4-emociones.png`.
+- Se quitó `lib/pets/pets.dart` (las 3 anteriores; siguen en el historial de git).
+- Esperando: que Esteban diga si le gusta o qué cambiar (orejas, colores, caras).
+
 ## Siguiente
 1. Recordar mascota elegida y posición (`~/.config/laika/state.json`).
 2. Al reconectar, pedir `/api/history` para no perder mensajes.

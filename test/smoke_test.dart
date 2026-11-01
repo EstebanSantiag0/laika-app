@@ -39,6 +39,31 @@ Future<void> close(WidgetTester tester) async {
 void main() {
   test('hay al menos 5 variantes', () => expect(allVariants.length, greaterThanOrEqualTo(5)));
 
+  test('Laika pone cara según lo que dice', () {
+    expect(Mood.forText('jajaja qué bueno'), Mood.laughing);
+    expect(Mood.forText('Te quiero ❤️'), Mood.inLove);
+    expect(Mood.forText('¡Hola! ¿Cómo estás?'), Mood.greeting);
+    expect(Mood.forText('Hmm, no estoy segura'), Mood.doubting);
+    expect(Mood.forText('wow, increíble'), Mood.impressed);
+    expect(Mood.forText('😈 ya lo anoté'), Mood.scheming);
+    expect(Mood.forText('✏️ goed → good'), Mood.cheeky);
+    expect(Mood.forText('⚠️ Laika no pudo contestar.'), Mood.ashamed);
+    expect(Mood.forText('Muy bien, sigamos con el ruso.'), Mood.happy);
+  });
+
+  test('dormida, despertando y pensando tienen su cara', () async {
+    final api = MockLaika()..latency = Duration.zero;
+    final c = PetController(api, idle: const Duration(seconds: 30));
+    expect(c.mood, Mood.sleeping);
+    c.hover();
+    expect(c.mood, Mood.waking);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(c.isAwake, isTrue);
+    expect(c.mood, Mood.greeting, reason: 'saluda al despertar');
+    c.dispose();
+    api.dispose();
+  });
+
   for (final v in allVariants) {
     testWidgets('${v.id}: despierta, contesta, se duerme y dibuja todo', (tester) async {
       final c = await open(tester, v.id);

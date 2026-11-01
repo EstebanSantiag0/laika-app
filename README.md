@@ -7,9 +7,22 @@ flotando sobre tus apps (Android), con la que platicas, y un **cerebro visible**
 donde ves todo lo que Laika recuerda de ti, organizado por áreas de tu vida y
 por tiempo.
 
-> **Estado actual (nov 2026): prototipos.** Hay **5 diseños muy distintos** con
-> el mismo comportamiento y un **servidor simulado**. Sirven para elegir el
-> estilo antes de conectar la app al servidor real.
+> **Estado actual (nov 2026):** diseño final elegido, Laika vive sobre el
+> escritorio de Linux (`--pet`) y ya habla con el servidor real (o con uno
+> simulado si no configuras ninguno). Android viene después.
+
+| Escritorio | Cerebro | Agenda |
+|---|---|---|
+| ![Escritorio](docs/screenshots/laika-1-escritorio.png) | ![Cerebro](docs/screenshots/laika-2-cerebro.png) | ![Agenda](docs/screenshots/laika-3-agenda.png) |
+
+**Laika tiene 15 caras** y las cambia según lo que pasa y lo que dice (se ríe
+con "jaja", se sorprende cuando suena un recordatorio, trama algo cuando lo
+anota, se apena si algo falla…). Es un diseño original: capucha con orejas de
+murciélago, luna en la frente, nariz de perrito y cola con punta de corazón.
+
+![Emociones de Laika](docs/screenshots/laika-4-emociones.png)
+
+Los 5 prototipos con los que se eligió el estilo siguen en la galería:
 
 | Cosmos | Papel | Pixel | Brutal | Cristal |
 |---|---|---|---|---|
@@ -111,7 +124,7 @@ Para generar un ejecutable de Linux:
 flutter build linux --release
 ./build/linux/x64/release/bundle/laika_app          # galería de diseños
 ./build/linux/x64/release/bundle/laika_app --pet    # Laika sobre tu escritorio
-./build/linux/x64/release/bundle/laika_app --app    # la app: cerebro, agenda y mascota
+./build/linux/x64/release/bundle/laika_app --app    # la app: cerebro, agenda y emociones
 ```
 
 ### Laika sobre tu escritorio (Linux, Wayland)
@@ -228,7 +241,7 @@ lib/
 ├── desktop/               Laika sobre el escritorio real (Linux)
 │   ├── pet_overlay.dart   la capa transparente
 │   └── window_bridge.dart qué zonas reciben clics (canal con linux/runner)
-├── pets/pets.dart         las 3 mascotas originales
+├── pets/laika_pet.dart    Laika dibujada con código: 15 emociones y 2 formas de dormir
 └── variants/              diseños: laika.dart (el elegido) + los 5 prototipos
     ├── laika.dart  cosmos.dart  papel.dart  pixel.dart  brutal.dart  cristal.dart
     └── variants.dart      lista de diseños
@@ -244,7 +257,7 @@ Contrato con el servidor: [`docs/API.md`](docs/API.md).
 1. ✅ Elegir diseño (mezcla final en `lib/variants/laika.dart`).
 2. ✅ `HttpLaika`: cliente real (HTTPS + WebSocket por Tailscale).
 3. ✅ Linux: Laika sobre tu escritorio real (`--pet`, `gtk-layer-shell`).
-4. Recordar la mascota elegida y dónde la dejaste.
+4. Recordar dónde dejaste a Laika en la pantalla.
 5. Android: burbuja flotante sobre otras apps y notificaciones de recordatorios.
 6. Animaciones finales y alimentar a Laika arrastrándole PDFs o enlaces.
 

@@ -6,7 +6,7 @@
 //  • Cerebro: la esfera 3D de Cosmos, en versión clara.
 //  • Notas y recordatorios: estilo Brutal (bordes gruesos, sombras duras),
 //    con los colores de Cristal.
-//  • Mascota: una de las 3 originales de lib/pets/pets.dart (se elige en la app).
+//  • Mascota: Laika, diseño original con 15 emociones (lib/pets/laika_pet.dart).
 
 import 'dart:math';
 
@@ -19,7 +19,7 @@ import '../core/session.dart';
 import '../core/sphere_view.dart';
 import '../core/stage.dart';
 import '../core/widgets.dart';
-import '../pets/pets.dart';
+import '../pets/laika_pet.dart';
 
 // ── Paleta Cristal ──────────────────────────────────────────────────────────
 const lInk = Color(0xFF3B3355);
@@ -47,13 +47,10 @@ BoxDecoration brutalBox(Color fill, {double shadow = 5, double border = 2.5}) =>
       boxShadow: shadow > 0 ? [BoxShadow(color: lInk, offset: Offset(shadow, shadow))] : null,
     );
 
-/// La mascota elegida (se comparte entre el escritorio y la app).
-final petKind = ValueNotifier<PetKind>(PetKind.chibi);
-
 final laikaSpec = VariantSpec(
   id: 'laika',
   name: 'Laika (mezcla elegida)',
-  tagline: 'Paleta Cristal, mensajes Pixel, cerebro-esfera de Cosmos y notas Brutal. 3 mascotas originales.',
+  tagline: 'Paleta Cristal, mensajes Pixel, cerebro-esfera de Cosmos y notas Brutal. mascota con 15 emociones.',
   swatch: const [lLavender, lPink, lMint, lAccent],
   build: (s) => LaikaApp(session: s),
 );
@@ -136,11 +133,9 @@ class LaikaSkin extends PetSkin {
         ]);
 
   @override
-  Widget pet(BuildContext context, PetController c, double t) => ValueListenableBuilder(
-        valueListenable: petKind,
-        builder: (context, kind, _) => CustomPaint(
-          painter: GothPetPainter(kind: kind, state: c.state, pose: c.sleepPose, t: t, bell: c.pendingReminders.isNotEmpty),
-        ),
+  Widget pet(BuildContext context, PetController c, double t) => CustomPaint(
+        painter: LaikaPainter(
+            mood: c.mood, lying: c.sleepPose == SleepPose.lying, t: t, bell: c.pendingReminders.isNotEmpty),
       );
 
   /// Cuadro de diálogo estilo Pixel (doble borde, letra por letra) en colores Cristal.
@@ -244,7 +239,7 @@ class _LaikaAppState extends State<LaikaApp> {
           ('Escritorio', () => PetStage(controller: widget.session.pet, skin: const LaikaSkin(), onOpenApp: () => setState(() => tab = 1))),
         ('Cerebro', () => LaikaBrain(brain: widget.session.brain)),
         ('Agenda', () => LaikaAgenda(rem: widget.session.reminders)),
-        ('Mascota', () => const PetPicker()),
+        ('Emociones', () => const MoodSheet()),
       ];
 
   @override
@@ -525,15 +520,16 @@ class LaikaAgenda extends StatelessWidget {
       );
 }
 
-// ── Elegir mascota ──────────────────────────────────────────────────────────
+// ── Emociones de Laika ──────────────────────────────────────────────────────
 
-class PetPicker extends StatefulWidget {
-  const PetPicker({super.key});
+/// Todas las caras de Laika y cuándo las pone.
+class MoodSheet extends StatefulWidget {
+  const MoodSheet({super.key});
   @override
-  State<PetPicker> createState() => _PetPickerState();
+  State<MoodSheet> createState() => _MoodSheetState();
 }
 
-class _PetPickerState extends State<PetPicker> with SingleTickerProviderStateMixin {
+class _MoodSheetState extends State<MoodSheet> with SingleTickerProviderStateMixin {
   late final AnimationController _a = AnimationController(vsync: this, duration: const Duration(seconds: 1))..repeat();
   final _watch = Stopwatch()..start();
 
@@ -543,64 +539,43 @@ class _PetPickerState extends State<PetPicker> with SingleTickerProviderStateMix
     super.dispose();
   }
 
+  Widget _card(String label, String when, Mood mood, {bool lying = false}) => Container(
+        width: 180,
+        padding: const EdgeInsets.fromLTRB(8, 10, 8, 12),
+        decoration: brutalBox(Colors.white, shadow: 4, border: 2),
+        child: Column(children: [
+          SizedBox(
+            height: 150,
+            width: 150,
+            child: AnimatedBuilder(
+              animation: _a,
+              builder: (context, _) =>
+                  CustomPaint(painter: LaikaPainter(mood: mood, lying: lying, t: _watch.elapsedMilliseconds / 1000)),
+            ),
+          ),
+          Text(label, style: _t(15, w: FontWeight.w900)),
+          Text(when, textAlign: TextAlign.center, style: _t(11.5, color: lSoft)),
+        ]),
+      );
+
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder(
-      valueListenable: petKind,
-      builder: (context, current, _) => ListView(
-        padding: const EdgeInsets.fromLTRB(36, 80, 36, 60),
-        children: [
-          Text('Mascota', style: _t(44, w: FontWeight.w900)),
-          Text('Diseños originales. Cada una se ve despierta, dormida sentada (15 s) y acostada (30 s).',
-              style: _t(13, color: lSoft)),
-          const SizedBox(height: 22),
-          for (final k in PetKind.values) ...[
-            GestureDetector(
-              onTap: () => petKind.value = k,
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: brutalBox(k == current ? lLavender : Colors.white, shadow: k == current ? 2 : 6),
-                child: Row(children: [
-                  SizedBox(
-                    width: 170,
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(k.label, style: _t(22, w: FontWeight.w900)),
-                      Text(k.description, style: _t(13, color: lSoft)),
-                      const SizedBox(height: 10),
-                      if (k == current)
-                        Text('✓ en uso', style: _t(13, w: FontWeight.w800, color: lAccent))
-                      else
-                        Text('Elegir', style: _t(13, w: FontWeight.w700, color: lInk).copyWith(decoration: TextDecoration.underline)),
-                    ]),
-                  ),
-                  for (final (label, state, pose) in [
-                    ('Despierta', PetState.awake, SleepPose.seated),
-                    ('Dormida sentada', PetState.asleep, SleepPose.seated),
-                    ('Acostada', PetState.asleep, SleepPose.lying),
-                  ])
-                    Expanded(
-                      child: Column(children: [
-                        SizedBox(
-                          height: 140,
-                          width: 140,
-                          child: AnimatedBuilder(
-                            animation: _a,
-                            builder: (context, _) => CustomPaint(
-                              painter: GothPetPainter(
-                                  kind: k, state: state, pose: pose, t: _watch.elapsedMilliseconds / 1000, bell: false),
-                            ),
-                          ),
-                        ),
-                        Text(label, style: _t(12, w: FontWeight.w600, color: lSoft)),
-                      ]),
-                    ),
-                ]),
-              ),
-            ),
-            const SizedBox(height: 18),
-          ],
-        ],
-      ),
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(36, 80, 36, 60),
+      children: [
+        Text('Emociones', style: _t(44, w: FontWeight.w900)),
+        Text('Laika cambia de cara según lo que pasa y lo que dice. Las reacciones duran unos segundos.',
+            style: _t(13, color: lSoft)),
+        const SizedBox(height: 22),
+        Wrap(spacing: 18, runSpacing: 18, children: [
+          for (final m in Mood.values)
+            if (m == Mood.sleeping) ...[
+              _card('Dormida sentada', 'tras 15 s sin hacerle caso', m),
+              _card('Dormida en su cojín', '15 s después', m, lying: true),
+            ] else
+              _card(m.label, m.when, m),
+        ]),
+      ],
     );
   }
 }
