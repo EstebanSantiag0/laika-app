@@ -26,7 +26,7 @@
 ## Servidor (sesión de cc-server, rama `w8-reminders-api-areas`)
 - W8.1 recordatorios reales ✅ · W8.2 API de lectura ✅
 - W8.3 áreas de vida + tiempo ✅ (Esteban aprobó el backfill). La app ya entiende nodos de área, `in_area` y `review_after`.
-- W8.4 repo público `EstebanSantiag0/laika` (manifiesto + escaneo antes de publicar) ⏳
+- W8.4 repo público `EstebanSantiag0/laika` ✅ (2026-11-01, commit a3b7030, MIT; publicado por la sesión de cc-server)
 
 ## 2026-11-01 (tarde) — Esteban eligió
 - Cerebro = esfera de Cosmos · notas y recordatorios = Brutal · paleta = Cristal · mensajes = Pixel.
@@ -75,3 +75,8 @@
   La mascota `--pet` vigila el archivo (inotify) y cambia al instante.
 - `tool/make_skin.py`: arma una skin desde imágenes propias (recorta y quita el fondo liso).
 - Esteban va a **dibujar su propio set** de imágenes (la mezcla de fuentes no combinaba). Mientras, la skin es el círculo.
+
+## 2026-11-01 (cierre)
+- El servidor ya es público: https://github.com/EstebanSantiag0/laika (MIT). Revisado desde aquí: sin hostname del
+  tailnet, correos, bases de datos ni tokens. Nuevo en el servidor: `user.name`/`user.pronouns`/`user.gender` en
+  config.yaml y `scripts/setup.py`. El contrato de la API y del WebSocket no cambió.
