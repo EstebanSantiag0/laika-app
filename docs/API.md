@@ -39,7 +39,12 @@ La mascota despierta solo si `ok && llm`. Timeout en la app: 4 s.
 - `subkind`: entidades `person|place|thing|topic|work`; datos `identity|habit|opinion|event|goal|preference|relationship|language|worry|us|laika_self`.
 - `sensitive`: la app los oculta por defecto ("🔒 privado").
 - `status`: solo recordatorios.
-- `areas` llega vacío hasta que el servidor termine la etapa W8.3.
+- `review_after` (`"YYYY-MM-DD"`): solo datos de *etapa actual*; desde ese día Laika pregunta si sigue siendo cierto.
+- **Áreas:** vienen de `config.yaml` del servidor (los `id` son estables; nombre y color se pueden cambiar).
+  Hay un nodo `kind: "area"` por área (`id: "area:<id>"`) y aristas `in_area` hacia él. La app **no** los
+  dibuja como recuerdos: cada diseño muestra las áreas a su manera (zonas, rebanadas, cuartos).
+- Datos: hasta 2 áreas. Entidades y conversaciones: las 2 áreas más comunes de sus datos. Algunos nodos traen `[]`.
+- `scope=active` no incluye lo archivado; la app pide `all` y filtra con el botón "Ver archivados".
 
 ## GET /api/reminders?status=pending|all
 

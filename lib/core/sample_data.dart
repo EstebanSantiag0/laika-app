@@ -64,6 +64,7 @@ MemoryGraph buildSampleGraph(DateTime now) {
       importance: imp,
       createdAt: d(-ageDays),
       sensitive: sensitive,
+      reviewAfter: scope == TimeScope.stage ? d(21 - ageDays) : null,
     ));
     if (about != null) {
       edges.add(MemoryEdge(source: id, target: 'entity:$about', kind: 'about', weight: 0.9));
@@ -164,6 +165,24 @@ MemoryGraph buildSampleGraph(DateTime now) {
   edges.add(const MemoryEdge(source: 'reminder:2', target: 'entity:pasaporte', kind: 'about'));
   edges.add(const MemoryEdge(source: 'reminder:3', target: 'entity:cpu', kind: 'about'));
   edges.add(const MemoryEdge(source: 'reminder:4', target: 'entity:beca', kind: 'about'));
+
+  // Como en el servidor real: un nodo por área y aristas in_area hacia él.
+  for (final a in kAreas) {
+    nodes.add(MemoryNode(
+      id: 'area:${a.id}',
+      kind: NodeKind.area,
+      label: a.name,
+      text: a.name,
+      areas: [a.id],
+      createdAt: d(-90),
+    ));
+  }
+  for (final n in List.of(nodes)) {
+    if (n.kind == NodeKind.area) continue;
+    for (final a in n.areas) {
+      edges.add(MemoryEdge(source: n.id, target: 'area:$a', kind: 'in_area', weight: 0.3));
+    }
+  }
 
   return MemoryGraph(generatedAt: now, areas: kAreas, nodes: nodes, edges: edges);
 }

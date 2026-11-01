@@ -90,7 +90,11 @@ class MemoryNode {
     this.subkind,
     this.sensitive = false,
     this.status,
+    this.reviewAfter,
   });
+
+  /// Solo datos de "etapa actual": desde este día Laika pregunta si sigue siendo cierto.
+  final DateTime? reviewAfter;
 
   final String id;
   final NodeKind kind;
@@ -133,6 +137,7 @@ class MemoryNode {
         subkind: j['subkind'] as String?,
         sensitive: j['sensitive'] == true,
         status: j['status'] as String?,
+        reviewAfter: _date(j['review_after']),
       );
 
   /// Copia con la etiqueta y el texto ocultos (para datos sensibles).
@@ -151,6 +156,7 @@ class MemoryNode {
         subkind: subkind,
         sensitive: true,
         status: status,
+        reviewAfter: reviewAfter,
       );
 
   Map<String, dynamic> toJson() => {
@@ -168,6 +174,9 @@ class MemoryNode {
         'subkind': subkind,
         'sensitive': sensitive,
         'status': status,
+        'review_after': reviewAfter == null
+            ? null
+            : '${reviewAfter!.year}-${reviewAfter!.month.toString().padLeft(2, '0')}-${reviewAfter!.day.toString().padLeft(2, '0')}',
       };
 }
 

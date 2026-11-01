@@ -25,5 +25,5 @@
 
 ## Servidor (sesión de cc-server, rama `w8-reminders-api-areas`)
 - W8.1 recordatorios reales ✅ · W8.2 API de lectura ✅
-- W8.3 áreas de vida + tiempo (Esteban revisa una muestra antes de aplicar) ⏳
+- W8.3 áreas de vida + tiempo ✅ (Esteban aprobó el backfill). La app ya entiende nodos de área, `in_area` y `review_after`.
 - W8.4 repo público `EstebanSantiag0/laika` (manifiesto + escaneo antes de publicar) ⏳

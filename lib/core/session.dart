@@ -210,6 +210,7 @@ String nodeDates(MemoryNode n) {
   final parts = <String>[
     if (n.dueAt != null) 'para el ${f(n.dueAt!)}',
     if (n.validTo != null) 'válido hasta ${f(n.validTo!)}',
+    if (n.reviewAfter != null) 'Laika preguntará si sigue siendo cierto desde el ${f(n.reviewAfter!)}',
     'guardado el ${f(n.createdAt)}',
   ];
   return parts.join(' · ');

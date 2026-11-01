@@ -100,6 +100,7 @@ class BrainController extends ChangeNotifier {
 
   /// ¿El nodo pasa los filtros? (no confundir con "coincide con la búsqueda")
   bool isVisible(MemoryNode n) {
+    if (n.kind == NodeKind.area) return false; // cada diseño dibuja las áreas a su manera
     if (!showArchived && n.timeScope == TimeScope.archived) return false;
     if (scopeFilter.isNotEmpty && n.kind != NodeKind.entity && !scopeFilter.contains(n.timeScope)) {
       return false;
@@ -120,7 +121,9 @@ class BrainController extends ChangeNotifier {
     final g = graph;
     if (g == null) return const [];
     final ids = {for (final n in visibleNodes) n.id};
-    return g.edges.where((e) => ids.contains(e.source) && ids.contains(e.target)).toList();
+    return g.edges
+        .where((e) => e.kind != 'in_area' && ids.contains(e.source) && ids.contains(e.target))
+        .toList();
   }
 
   /// Nodos conectados directamente (por aristas).
@@ -129,6 +132,7 @@ class BrainController extends ChangeNotifier {
     if (g == null) return const [];
     final out = <MemoryNode>[];
     for (final e in g.edges) {
+      if (e.kind == 'in_area') continue;
       final other = e.source == id ? e.target : (e.target == id ? e.source : null);
       final n = other == null ? null : g.nodeById[other];
       if (n != null) out.add(n);

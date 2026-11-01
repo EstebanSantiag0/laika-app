@@ -256,7 +256,10 @@ class MockLaika implements LaikaApi {
       generatedAt: DateTime.now(),
       areas: _graph.areas,
       nodes: [..._graph.nodes, n],
-      edges: _graph.edges,
+      edges: [
+        ..._graph.edges,
+        for (final a in n.areas) MemoryEdge(source: n.id, target: 'area:$a', kind: 'in_area', weight: 0.3),
+      ],
     );
     _events.add(MemoryEvent(n));
   }
