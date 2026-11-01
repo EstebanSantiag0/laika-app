@@ -51,18 +51,50 @@ muestra y envía.
 
 ## El escritorio (`PetStage`)
 
-- Hoy el "escritorio" se simula dentro de la ventana.
+- En los prototipos y en `--app` el "escritorio" se simula dentro de la ventana;
+  con `--pet` es tu escritorio real (ver abajo).
 - Regla de lado: `petOnRight = centroX(Laika) > anchoPantalla / 2`. Si es
   verdadero, la columna de chat (burbujas + caja de texto) se dibuja a la
   izquierda de Laika; si no, a la derecha.
 - Si Laika está muy arriba, la columna se ancla hacia abajo desde su borde
   superior; si no, crece hacia arriba desde su borde inferior.
 
-### Plan para el escritorio real
+### Escritorio real en Linux (`--pet`) ✅
+
+```
+laika_app --pet
+  └─ my_application.cc: ¿Wayland + gtk_layer_is_supported()?
+       sí → capa TOP "laika-pet", anclada a los 4 bordes, zona exclusiva 0,
+            teclado ON_DEMAND, fondo RGBA transparente, sin barra de título.
+            Región de entrada vacía hasta que Dart diga otra cosa.
+       no → ventana normal (LaikaApp con el escritorio simulado)
+  └─ Dart: PetOverlay → PetStage(onRegions) → WindowBridge.setInputRegion
+       Tras cada cuadro se miden (GlobalKey) Laika, la columna de chat y el
+       estado; si cambiaron, se mandan por el canal `laika/window`
+       (`setInputRegion([[x,y,w,h],…])`). Solo esas zonas reciben clics.
+  └─ 2 clics → Process.start(laika_app --app) en otro proceso (ventana normal).
+```
+
+- Mientras arrastras a Laika, Wayland mantiene el puntero "agarrado", así que
+  no se pierde aunque salgas un instante de la región.
+- La caja de texto avisa al servidor que estás escribiendo
+  (`PetController.composing`), y deja de avisar al vaciarla o al salir de ella.
+
+### Cliente real (`HttpLaika`)
+
+- HTTP con `HttpClient` de `dart:io` (sin dependencias extra); la identidad la pone `tailscale serve`.
+- El WebSocket se abre **solo cuando Laika despierta** (después de un `/health` correcto).
+  Si se corta, **no** se reconecta solo: se reabre en el siguiente despertar
+  (regla de Esteban: nada de tráfico en segundo plano).
+- Burbujas: cada `message` con `role: "companion"` es una burbuja; las
+  correcciones (`role: "correction"`) se muestran como `✏️ original → mejor`.
+- URL del servidor: `--dart-define=LAIKA_SERVER`, variable `LAIKA_SERVER` o
+  `~/.config/laika/config.json`; si no hay, servidor simulado.
+
+### Pendiente
 
 | Plataforma | Cómo | Nota |
 |---|---|---|
-| Linux (KDE/Wayland) | ventana sin marco y transparente con `gtk-layer-shell` (capa *overlay*), región de entrada solo sobre Laika y el chat | requiere `sudo pacman -S gtk-layer-shell` |
 | Android | servicio con permiso "mostrar sobre otras apps" (burbuja flotante) | el usuario concede el permiso una vez |
 
 ## Datos de ejemplo

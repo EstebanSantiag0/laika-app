@@ -1,6 +1,6 @@
 # Progreso — retomar aquí
 
-**Última actualización:** 2026-11-01 · **Estado:** 5 prototipos listos; esperando que Esteban elija diseño.
+**Última actualización:** 2026-11-01 (noche) · **Estado:** diseño final + modo escritorio `--pet` + cliente real. Falta que Esteban lo pruebe.
 
 ## Hecho
 - Proyecto Flutter (Linux + Android). Build de Linux release OK.
@@ -36,3 +36,24 @@
 - Hecho: diseño final `lib/variants/laika.dart` (primero en la galería) + `core/sphere_view.dart` compartido.
 - Siguiente: modo escritorio real en Linux (gtk-layer-shell, `--pet`) y app en ventana (`--app`);
   luego `HttpLaika` (protocolo /ws confirmado por cc-server, ver docs/API.md).
+
+## 2026-11-01 (noche) — Laika en el escritorio real
+- Hecho: `linux/runner` con gtk-layer-shell (`--pet`: capa transparente, solo Laika y su chat reciben clics,
+  canal `laika/window`). `lib/desktop/` (PetOverlay, WindowBridge). `--app` abre la app en ventana normal.
+- Hecho: `HttpLaika` (HTTPS + WS; el WS se abre solo al despertar, sin reconexión automática);
+  servidor desde `~/.config/laika/config.json`; aviso de "estoy escribiendo".
+- Hecho: `tool/install_linux.sh` (programa + lanzadores; `--autostart` opcional; `--uninstall`).
+- Probado: compila, 9 pruebas OK, `--pet` arranca 10 s en Wayland sin errores. **Falta probar a mano** clics,
+  arrastre y doble clic (lo hace Esteban), y el servidor real.
+
+## Esperando a Esteban (noche)
+- Probar `--pet` (si algo bloquea los clics: `pkill laika_app`).
+- Crear `~/.config/laika/config.json` con la URL del servidor.
+- ¿Instalar con autostart?
+- Elegir mascota: cabeza / chibi / cachorro.
+- W8.4: aprobar la publicación de `EstebanSantiag0/laika` (el servidor) y que se cree el repo vacío.
+
+## Siguiente
+1. Recordar mascota elegida y posición (`~/.config/laika/state.json`).
+2. Al reconectar, pedir `/api/history` para no perder mensajes.
+3. Android: burbuja flotante + notificaciones.

@@ -67,8 +67,8 @@ Servidor → app (los que usa la app):
 
 | type | Uso en la app |
 |---|---|
-| `message` | burbuja de Laika (`role: "assistant"`); los avisos de recordatorio llegan como `role: "system"` con `meta.reminder.id`; `update: true` = edición |
-| `typing` / `typing_stop` | indicador "escribiendo…" |
+| `message` | `{"message": {id, ts, role, channel, text, lang, audio_path, batch_id, status, meta, episode_id}}`. Cada burbuja de Laika es un `message` aparte con `role: "companion"`; las correcciones llegan con `role: "correction"` y `meta.corrections[{original, better, why}]`; los avisos de recordatorio, como `role: "system"` con `meta.reminder.id`; tu propio mensaje vuelve como eco (`role: "user"`, `meta.client_id`); `update: true` = reemplaza un mensaje ya mostrado |
+| `typing` / `typing_stop` | `typing` antes de cada burbuja; `typing_stop` cierra la tanda de respuestas |
 | `reminder` | `{"reminder": {...}}` al crear, avisar (`status: delivered`), hecho y pospuesto |
 | `error` | `{"text": "..."}` |
 
@@ -83,6 +83,11 @@ App → servidor:
 
 > Laika **no responde mientras la app diga que estás escribiendo**: al enviar
 > o al salir de la caja de texto hay que mandar `{"type":"typing","active":false}`.
+
+- **Sin repetición al reconectar:** lo que llegó mientras no había conexión se
+  pide con `GET /api/history?limit=50&before=<id>`.
+- **Autenticación:** la cabecera `tailscale-user-login` que añade `tailscale serve`.
+  Sin ella: HTTP 403 y el WebSocket se cierra con código 4403. `/health` es abierto.
 
 ## Correspondencia en el código
 
