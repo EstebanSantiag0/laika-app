@@ -36,6 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   # Reloj que las pruebas pueden adelantar (tiempo de lectura de las burbujas).
   clock: ^1.1.2
+  file_selector: ^1.1.0
 
 dev_dependencies:
   flutter_test:

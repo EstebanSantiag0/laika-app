@@ -37,15 +37,27 @@ enum NodeKind {
   entity('entity', 'Entidad'),
   fact('fact', 'Dato'),
   episode('episode', 'Conversación'),
-  reminder('reminder', 'Recordatorio');
+  reminder('reminder', 'Recordatorio'),
+
+  /// Algo guardado en el segundo cerebro (en el grafo su `kind` es idea,
+  /// for_later o saved; ver [MemoryNode.itemKind]).
+  item('item', 'Guardado'),
+
+  /// Una etiqueta (`tag:<nombre>`).
+  tag('tag', 'Etiqueta');
 
   const NodeKind(this.wire, this.label);
   final String wire;
   final String label;
 
-  static NodeKind parse(String? s) =>
-      values.firstWhere((v) => v.wire == s, orElse: () => fact);
+  static NodeKind parse(String? s, [String id = '']) {
+    if (s != null && (Item.kinds.contains(s) || id.startsWith('item:'))) return item;
+    return values.firstWhere((v) => v.wire == s, orElse: () => id.startsWith('tag:') ? tag : fact);
+  }
 }
+
+/// Nombre en español de cada tipo de cosa guardada.
+const itemKindLabels = {'idea': 'Idea', 'for_later': 'Para después', 'saved': 'Guardado'};
 
 /// Un área de la vida: estudios, finanzas, legal...
 class Area {
@@ -91,7 +103,35 @@ class MemoryNode {
     this.sensitive = false,
     this.status,
     this.reviewAfter,
+    this.editable = const [],
+    this.deletable = false,
+    this.updatedAt,
+    this.itemKind,
+    this.tags = const [],
+    this.url,
+    this.polarity,
+    this.count,
   });
+
+  /// Campos que se pueden editar desde la app (PATCH /api/nodes/{id}).
+  final List<String> editable;
+
+  /// ¿Se puede mandar a la papelera? (las áreas no).
+  final bool deletable;
+
+  /// Para no pisar una edición más nueva (PATCH con base_updated_at → 409).
+  final DateTime? updatedAt;
+
+  /// Solo cosas guardadas: idea | for_later | saved.
+  final String? itemKind;
+  final List<String> tags;
+  final String? url;
+
+  /// Solo datos: like | dislike | null.
+  final String? polarity;
+
+  /// Solo etiquetas: cuántos nodos la usan.
+  final int? count;
 
   /// Solo datos de "etapa actual": desde este día Laika pregunta si sigue siendo cierto.
   final DateTime? reviewAfter;
@@ -122,10 +162,13 @@ class MemoryNode {
 
   String? get primaryArea => areas.isEmpty ? null : areas.first;
 
-  factory MemoryNode.fromJson(Map<String, dynamic> j) => MemoryNode(
-        id: j['id'] as String,
-        kind: NodeKind.parse(j['kind'] as String?),
-        label: j['label'] as String? ?? '',
+  factory MemoryNode.fromJson(Map<String, dynamic> j) {
+    final id = j['id'] as String;
+    final kind = NodeKind.parse(j['kind'] as String?, id);
+    return MemoryNode(
+        id: id,
+        kind: kind,
+        label: j['label'] as String? ?? j['title'] as String? ?? '',
         text: j['text'] as String? ?? '',
         areas: (j['areas'] as List?)?.cast<String>() ?? const [],
         timeScope: TimeScope.parse(j['time_scope'] as String?),
@@ -138,7 +181,16 @@ class MemoryNode {
         sensitive: j['sensitive'] == true,
         status: j['status'] as String?,
         reviewAfter: _date(j['review_after']),
+        editable: (j['editable'] as List?)?.cast<String>() ?? const [],
+        deletable: j['deletable'] == true,
+        updatedAt: _date(j['updated_at']),
+        itemKind: kind == NodeKind.item ? (Item.kinds.contains(j['kind']) ? j['kind'] as String : 'saved') : null,
+        tags: (j['tags'] as List?)?.cast<String>() ?? const [],
+        url: j['url'] as String?,
+        polarity: j['polarity'] as String?,
+        count: (j['count'] as num?)?.toInt(),
       );
+  }
 
   /// Copia con la etiqueta y el texto ocultos (para datos sensibles).
   MemoryNode masked() => MemoryNode(
@@ -157,11 +209,23 @@ class MemoryNode {
         sensitive: true,
         status: status,
         reviewAfter: reviewAfter,
+        editable: const [], // un dato oculto no se edita hasta mostrarlo
+        deletable: deletable,
+        updatedAt: updatedAt,
+        itemKind: itemKind,
+        polarity: polarity,
       );
 
   Map<String, dynamic> toJson() => {
         'id': id,
-        'kind': kind.wire,
+        'kind': itemKind ?? kind.wire,
+        if (editable.isNotEmpty) 'editable': editable,
+        'deletable': deletable,
+        if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
+        if (tags.isNotEmpty) 'tags': tags,
+        if (url != null) 'url': url,
+        if (polarity != null) 'polarity': polarity,
+        if (count != null) 'count': count,
         'label': label,
         'text': text,
         'areas': areas,
@@ -189,24 +253,48 @@ class MemoryEdge {
     required this.target,
     this.kind = 'related',
     this.weight = 0.5,
+    this.id,
+    this.origin = 'computed',
+    this.label,
   });
 
   final String source;
   final String target;
 
-  /// about | related | in_area | in_episode | similar
+  /// about | related | in_area | in_episode | similar | tagged | link
   final String kind;
   final double weight;
+
+  /// "link:42", "about:17" o "similar:fact:12:fact:40". Sin id no se puede borrar.
+  final String? id;
+
+  /// computed | auto | user (las que dibujaste tú).
+  final String origin;
+
+  /// Por qué están conectados (las tuyas, o la razón corta de Laika).
+  final String? label;
+
+  bool get deletable => id != null;
 
   factory MemoryEdge.fromJson(Map<String, dynamic> j) => MemoryEdge(
         source: j['source'] as String,
         target: j['target'] as String,
         kind: j['kind'] as String? ?? 'related',
         weight: (j['weight'] as num?)?.toDouble() ?? 0.5,
+        id: j['id'] as String?,
+        origin: j['origin'] as String? ?? 'computed',
+        label: j['label'] as String?,
       );
 
-  Map<String, dynamic> toJson() =>
-      {'source': source, 'target': target, 'kind': kind, 'weight': weight};
+  Map<String, dynamic> toJson() => {
+        'source': source,
+        'target': target,
+        'kind': kind,
+        'weight': weight,
+        if (id != null) 'id': id,
+        'origin': origin,
+        if (label != null) 'label': label,
+      };
 }
 
 /// Respuesta de GET /api/graph.
