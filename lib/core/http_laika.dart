@@ -29,26 +29,42 @@ class HttpLaika implements LaikaApi {
 
   // ── HTTP ──────────────────────────────────────────────────────────────────
 
-  Future<Object?> _request(String method, String path, {Map<String, String>? query, Object? body}) async {
+  Future<Object?> _request(String method, String path,
+      {Map<String, String>? query, Object? body, Duration timeout = const Duration(seconds: 20)}) async {
+    final HttpClientResponse res;
+    final String text;
     try {
-      final uri = base.replace(path: '${base.path}$path', queryParameters: query);
+      final uri = base.replace(path: '${base.path}$path', queryParameters: query == null || query.isEmpty ? null : query);
       final req = await _http.openUrl(method, uri).timeout(const Duration(seconds: 8));
       req.headers.set(HttpHeaders.acceptHeader, 'application/json');
       if (body != null) {
         req.headers.contentType = ContentType.json;
         req.write(jsonEncode(body));
       }
-      final res = await req.close().timeout(const Duration(seconds: 20));
-      final text = await res.transform(utf8.decoder).join();
-      if (res.statusCode == 403) throw const LaikaOffline('El servidor rechazó la conexión (¿estás en Tailscale?)');
-      if (res.statusCode >= 400) throw LaikaOffline('Error ${res.statusCode} del servidor');
-      return text.isEmpty ? null : jsonDecode(text);
-    } on LaikaOffline {
-      rethrow;
+      res = await req.close().timeout(timeout);
+      text = await res.transform(utf8.decoder).join();
     } catch (e) {
       throw LaikaOffline('El servidor de Laika no responde ($e)');
     }
+    _check(res.statusCode, text);
+    return text.isEmpty ? null : jsonDecode(text);
   }
+
+  /// Convierte {"error", "field"?, "max_mb"?, "node_id"?} en [LaikaApiError].
+  void _check(int status, String text) {
+    if (status < 400) return;
+    if (status == 403) throw const LaikaApiError(403, 'El servidor rechazó la conexión (¿estás en Tailscale?)');
+    Map? j;
+    try {
+      final d = jsonDecode(text);
+      if (d is Map) j = d;
+    } catch (_) {}
+    throw LaikaApiError(status, (j?['error'] ?? j?['detail'] ?? 'Error $status del servidor').toString(),
+        field: j?['field'] as String?, maxMb: (j?['max_mb'] as num?)?.toInt(), nodeId: j?['node_id'] as String?);
+  }
+
+  /// Un id del grafo dentro de una ruta ("fact:12" → "fact%3A12").
+  static String _seg(String id) => Uri.encodeComponent(id);
 
   @override
   Future<Health> health() async {
@@ -81,6 +97,170 @@ class HttpLaika implements LaikaApi {
     if (list is! List) return const [];
     return list.whereType<Map<String, dynamic>>().map(Item.fromJson).toList();
   }
+
+  // ── Segundo cerebro ─────────────────────────────────────────────────────
+
+  static Item _item(Object? j) => Item.fromJson((j as Map<String, dynamic>)['item'] as Map<String, dynamic>);
+
+  @override
+  Future<ItemPage> items({String? kind, String? area, String? tag, String? status, String? q, int? before, int limit = 30}) async {
+    final j = await _request('GET', '/api/items', query: {
+      if (kind != null) 'kind': kind,
+      if (area != null) 'area': area,
+      if (tag != null) 'tag': tag,
+      if (status != null) 'status': status,
+      if (q != null && q.isNotEmpty) 'q': q,
+      if (before != null) 'before': '$before',
+      'limit': '$limit',
+    }) as Map<String, dynamic>;
+    return ItemPage([for (final e in j['items'] as List) Item.fromJson(e as Map<String, dynamic>)],
+        (j['next_before'] as num?)?.toInt());
+  }
+
+  @override
+  Future<Item> item(int id) async => _item(await _request('GET', '/api/items/$id'));
+
+  @override
+  Future<(Item, bool)> createItem({String? text, String? url, String? kind, List<String>? areas, List<String>? tags, String? note}) async {
+    final j = await _request('POST', '/api/items',
+        body: {
+          if (url != null) 'url': url,
+          if (text != null) 'text': text,
+          if (kind != null) 'kind': kind,
+          if (areas != null) 'areas': areas,
+          if (tags != null) 'tags': tags,
+          if (note != null && note.isNotEmpty) 'note': note,
+        },
+        timeout: const Duration(seconds: 60)) as Map<String, dynamic>; // sin kind, Laika lo clasifica (una llamada al modelo)
+    return (_item(j), j['duplicate'] == true);
+  }
+
+  @override
+  Future<(Item, bool)> uploadItem(String path, {String? kind, List<String>? areas, List<String>? tags, String? note}) async {
+    final file = File(path);
+    final name = path.split(Platform.pathSeparator).last;
+    final boundary = 'laika-${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}';
+    String field(String k, String v) => '--$boundary\r\nContent-Disposition: form-data; name="$k"\r\n\r\n$v\r\n';
+    final head = StringBuffer()
+      ..write(kind != null ? field('kind', kind) : '')
+      ..write(areas != null && areas.isNotEmpty ? field('areas', areas.join(',')) : '')
+      ..write(tags != null && tags.isNotEmpty ? field('tags', tags.join(',')) : '')
+      ..write(note != null && note.isNotEmpty ? field('note', note) : '')
+      ..write('--$boundary\r\nContent-Disposition: form-data; name="file"; filename="${name.replaceAll('"', '')}"\r\n'
+          'Content-Type: application/octet-stream\r\n\r\n');
+    final headBytes = utf8.encode(head.toString());
+    final tail = utf8.encode('\r\n--$boundary--\r\n');
+    final HttpClientResponse res;
+    final String text;
+    try {
+      final req = await _http.postUrl(base.replace(path: '${base.path}/api/items')).timeout(const Duration(seconds: 8));
+      req.headers.set(HttpHeaders.acceptHeader, 'application/json');
+      req.headers.set(HttpHeaders.contentTypeHeader, 'multipart/form-data; boundary=$boundary');
+      req.contentLength = headBytes.length + await file.length() + tail.length;
+      req.add(headBytes);
+      await req.addStream(file.openRead()); // en partes: un PDF de 100 MB no se carga entero en memoria
+      req.add(tail);
+      res = await req.close().timeout(const Duration(minutes: 10));
+      text = await res.transform(utf8.decoder).join();
+    } catch (e) {
+      throw LaikaOffline('No se pudo subir el archivo ($e)');
+    }
+    _check(res.statusCode, text);
+    final j = jsonDecode(text) as Map<String, dynamic>;
+    return (_item(j), j['duplicate'] == true);
+  }
+
+  @override
+  Future<Item> patchItem(int id, Map<String, Object?> fields) async =>
+      _item(await _request('PATCH', '/api/items/$id', body: fields));
+
+  @override
+  Future<Item> resurfaceAction(int id, String action) async =>
+      _item(await _request('POST', '/api/items/$id/resurface', body: {'action': action}));
+
+  @override
+  Uri? pageImage(int id, int page, {int width = 1200}) =>
+      base.replace(path: '${base.path}/api/items/$id/pages/$page.png', queryParameters: {'w': '${width.clamp(200, 2000)}'});
+
+  @override
+  Uri? fileUrl(int id) => base.replace(path: '${base.path}/api/items/$id/file');
+
+  @override
+  Future<List<SearchHit>> search(String q, {int limit = 20}) async {
+    final j = await _request('GET', '/api/search', query: {'q': q, 'limit': '$limit'}) as Map<String, dynamic>;
+    return [for (final e in j['results'] as List) SearchHit.fromJson(e as Map<String, dynamic>)];
+  }
+
+  @override
+  Future<List<(String, int)>> tags() async {
+    final j = await _request('GET', '/api/tags') as List;
+    return [for (final e in j.cast<Map<String, dynamic>>()) (e['tag'] as String, (e['count'] as num?)?.toInt() ?? 0)];
+  }
+
+  @override
+  Future<(List<Fact>, List<Fact>)> likes() async {
+    final j = await _request('GET', '/api/likes') as Map<String, dynamic>;
+    List<Fact> list(String k, String pol) =>
+        [for (final e in (j[k] as List? ?? const [])) Fact.fromJson(e as Map<String, dynamic>, polarity: pol)];
+    return (list('likes', 'like'), list('dislikes', 'dislike'));
+  }
+
+  @override
+  Future<Fact> patchLike(Fact fact, Map<String, Object?> fields) async {
+    final j = await _request('PATCH', '/api/likes/${fact.number}', body: fields) as Map<String, dynamic>;
+    return Fact.fromJson(j['node'] is Map ? j['node'] as Map<String, dynamic> : j);
+  }
+
+  @override
+  Future<NodeUpdate> patchNode(String nodeId, Map<String, Object?> fields, {DateTime? baseUpdatedAt}) async {
+    final j = await _request('PATCH', '/api/nodes/${_seg(nodeId)}', body: {
+      ...fields,
+      if (baseUpdatedAt != null) 'base_updated_at': baseUpdatedAt.toIso8601String(),
+    }) as Map<String, dynamic>;
+    return NodeUpdate(MemoryNode.fromJson(j['node'] as Map<String, dynamic>),
+        [for (final e in (j['edges'] as List? ?? const [])) MemoryEdge.fromJson(e as Map<String, dynamic>)]);
+  }
+
+  @override
+  Future<(String?, int)> tagRenamePreview(String nodeId, String name) async {
+    final j = await _request('PATCH', '/api/nodes/${_seg(nodeId)}', query: {'dry_run': 'true'}, body: {'name': name})
+        as Map<String, dynamic>;
+    return (j['merges_into'] as String?, (j['nodes_affected'] as num?)?.toInt() ?? 0);
+  }
+
+  @override
+  Future<TrashResult> deleteNode(String nodeId, {bool withFacts = false, bool dryRun = false}) async {
+    final j = await _request('DELETE', '/api/nodes/${_seg(nodeId)}', query: {
+      if (withFacts) 'with_facts': 'true',
+      if (dryRun) 'dry_run': 'true',
+    }) as Map<String, dynamic>;
+    return TrashResult.fromJson(j);
+  }
+
+  @override
+  Future<void> restoreNode(String nodeId) => _request('POST', '/api/trash/${_seg(nodeId)}/restore');
+
+  @override
+  Future<MemoryEdge> createEdge(String source, String target, {String? label}) async {
+    final j = await _request('POST', '/api/edges', body: {'source': source, 'target': target, if (label != null) 'label': label})
+        as Map<String, dynamic>;
+    return MemoryEdge.fromJson(j['edge'] as Map<String, dynamic>);
+  }
+
+  @override
+  Future<MemoryEdge> patchEdge(String edgeId, String label) async {
+    final j = await _request('PATCH', '/api/edges/${_seg(edgeId)}', body: {'label': label}) as Map<String, dynamic>;
+    return MemoryEdge.fromJson(j['edge'] as Map<String, dynamic>);
+  }
+
+  @override
+  Future<void> deleteEdge(String edgeId) => _request('DELETE', '/api/edges/${_seg(edgeId)}');
+
+  @override
+  Future<void> restoreEdge(String edgeId) => _request('POST', '/api/trash/edges/${_seg(edgeId)}/restore');
+
+  @override
+  Future<Trash> trash() async => Trash.fromJson(await _request('GET', '/api/trash') as Map<String, dynamic>);
 
   // ── WebSocket ─────────────────────────────────────────────────────────────
 

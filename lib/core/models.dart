@@ -482,19 +482,22 @@ class ItemEvent extends LaikaEvent {
 }
 
 /// Algo guardado en el segundo cerebro: una idea, algo para después o un
-/// archivo/link (contrato: PLAN-second-brain §5 del servidor).
+/// archivo/link (contrato: PLAN-second-brain §5 y docs/API.md del servidor).
 class Item {
   const Item({
     required this.id,
     this.kind = 'saved',
     this.title = '',
     this.text = '',
+    this.note = '',
     this.format = 'text',
     this.url,
     this.areas = const [],
     this.tags = const [],
     this.status = 'active',
+    this.doc,
     this.createdAt,
+    this.updatedAt,
     this.resurfaceAt,
   });
 
@@ -504,6 +507,7 @@ class Item {
   final String kind;
   final String title;
   final String text;
+  final String note;
 
   /// pdf | book | link | video | image | text
   final String format;
@@ -513,22 +517,238 @@ class Item {
 
   /// active | done | archived
   final String status;
+
+  /// El documento que Laika leyó (PDF, página del link, transcripción…), o null.
+  final ItemDoc? doc;
   final DateTime? createdAt;
+  final DateTime? updatedAt;
   final DateTime? resurfaceAt;
 
   static const kinds = {'idea', 'for_later', 'saved'};
+
+  String get nodeId => 'item:$id';
+  String get kindLabel => itemKindLabels[kind] ?? 'Guardado';
+  String get displayTitle => title.isNotEmpty ? title : (text.isNotEmpty ? text : (url ?? 'Sin título'));
 
   factory Item.fromJson(Map<String, dynamic> j) => Item(
         id: (j['id'] as num).toInt(),
         kind: kinds.contains(j['kind']) ? j['kind'] as String : 'saved',
         title: j['title'] as String? ?? '',
         text: j['text'] as String? ?? '',
+        note: j['note'] as String? ?? '',
         format: j['format'] as String? ?? 'text',
         url: j['url'] as String?,
         areas: (j['areas'] as List?)?.cast<String>() ?? const [],
         tags: (j['tags'] as List?)?.cast<String>() ?? const [],
         status: j['status'] as String? ?? 'active',
+        doc: j['doc'] is Map<String, dynamic> ? ItemDoc.fromJson(j['doc'] as Map<String, dynamic>) : null,
         createdAt: _date(j['created_at']),
+        updatedAt: _date(j['updated_at']),
         resurfaceAt: _date(j['resurface_at']),
       );
+
+  Item copyWith({String? kind, String? status, List<String>? areas, List<String>? tags, String? note, String? title}) =>
+      Item(
+        id: id,
+        kind: kind ?? this.kind,
+        title: title ?? this.title,
+        text: text,
+        note: note ?? this.note,
+        format: format,
+        url: url,
+        areas: areas ?? this.areas,
+        tags: tags ?? this.tags,
+        status: status ?? this.status,
+        doc: doc,
+        createdAt: createdAt,
+        updatedAt: DateTime.now(),
+        resurfaceAt: resurfaceAt,
+      );
+}
+
+/// El documento de una cosa guardada, mientras Laika lo lee y cuando termina.
+class ItemDoc {
+  const ItemDoc({required this.id, this.title = '', this.state = 'queued', this.progress = const {}, this.pages});
+
+  final int id;
+  final String title;
+
+  /// queued | indexing | ocr_pending | ready | ready_partial | failed
+  final String state;
+
+  /// {"chunks": {"done", "failed", "todo"}, "sections": {...}, "pages": {...}}
+  final Map<String, dynamic> progress;
+  final int? pages;
+
+  bool get ready => state == 'ready' || state == 'ready_partial';
+
+  /// 0..1 según los fragmentos ya leídos (null si no se sabe).
+  double? get fraction {
+    final c = progress['chunks'];
+    if (c is! Map) return null;
+    final done = (c['done'] as num?)?.toDouble() ?? 0;
+    final total = done + ((c['failed'] as num?) ?? 0) + ((c['todo'] as num?) ?? 0);
+    return total == 0 ? null : done / total;
+  }
+
+  String get stateLabel => switch (state) {
+        'queued' => 'en la fila',
+        'indexing' => 'leyendo',
+        'ocr_pending' => 'esperando OCR',
+        'ready' => 'listo',
+        'ready_partial' => 'listo (con partes que no pudo leer)',
+        'failed' => 'no pudo leerlo',
+        _ => state,
+      };
+
+  factory ItemDoc.fromJson(Map<String, dynamic> j) => ItemDoc(
+        id: (j['id'] as num?)?.toInt() ?? 0,
+        title: j['title'] as String? ?? '',
+        state: j['state'] as String? ?? 'queued',
+        progress: (j['progress'] as Map?)?.cast<String, dynamic>() ?? const {},
+        pages: (j['pages'] as num?)?.toInt(),
+      );
+}
+
+/// Una página de GET /api/items.
+class ItemPage {
+  const ItemPage(this.items, this.nextBefore);
+  final List<Item> items;
+
+  /// Para pedir la siguiente página (`before=`), o null si no hay más.
+  final int? nextBefore;
+}
+
+/// Un gusto o algo que no le gusta (un dato con polaridad).
+class Fact {
+  const Fact({required this.id, required this.text, this.areas = const [], this.createdAt, this.sensitive = false, this.polarity});
+
+  /// "fact:12". En la ruta PATCH /api/likes/{n} va solo el número.
+  final String id;
+  final String text;
+  final List<String> areas;
+  final DateTime? createdAt;
+  final bool sensitive;
+
+  /// like | dislike | null
+  final String? polarity;
+
+  int get number => int.parse(id.split(':').last);
+
+  factory Fact.fromJson(Map<String, dynamic> j, {String? polarity}) => Fact(
+        id: j['id'] as String,
+        text: j['text'] as String? ?? '',
+        areas: (j['areas'] as List?)?.cast<String>() ?? const [],
+        createdAt: _date(j['created_at']),
+        sensitive: j['sensitive'] == true,
+        polarity: j['polarity'] as String? ?? polarity,
+      );
+}
+
+/// Un resultado de GET /api/search.
+class SearchHit {
+  const SearchHit({
+    required this.itemId,
+    this.docId,
+    this.chunkId,
+    this.title = '',
+    this.kind = 'saved',
+    this.format = 'text',
+    this.snippet = '',
+    this.pageFrom,
+    this.pageTo,
+    this.score = 0,
+  });
+
+  final int itemId;
+  final int? docId;
+  final int? chunkId;
+  final String title;
+  final String kind;
+  final String format;
+  final String snippet;
+
+  /// Páginas del PDF (null hasta que el servidor las tenga, SB3).
+  final int? pageFrom;
+  final int? pageTo;
+  final double score;
+
+  String? get pages => pageFrom == null
+      ? null
+      : (pageTo == null || pageTo == pageFrom ? 'p. $pageFrom' : 'pp. $pageFrom–$pageTo');
+
+  factory SearchHit.fromJson(Map<String, dynamic> j) => SearchHit(
+        itemId: (j['item_id'] as num).toInt(),
+        docId: (j['doc_id'] as num?)?.toInt(),
+        chunkId: (j['chunk_id'] as num?)?.toInt(),
+        title: j['title'] as String? ?? '',
+        kind: j['kind'] as String? ?? 'saved',
+        format: j['format'] as String? ?? 'text',
+        snippet: j['snippet'] as String? ?? j['text'] as String? ?? '',
+        pageFrom: (j['page_from'] as num?)?.toInt(),
+        pageTo: (j['page_to'] as num?)?.toInt(),
+        score: (j['score'] as num?)?.toDouble() ?? 0,
+      );
+}
+
+/// Lo que devuelve editar un nodo: el nodo nuevo y sus conexiones.
+class NodeUpdate {
+  const NodeUpdate(this.node, this.edges);
+  final MemoryNode node;
+  final List<MemoryEdge> edges;
+}
+
+/// Lo que se fue (o se iría, con dry_run) a la papelera al borrar.
+class TrashResult {
+  const TrashResult(this.trashed, this.edgesRemoved);
+  final List<String> trashed;
+  final List<String> edgesRemoved;
+
+  factory TrashResult.fromJson(Map<String, dynamic> j) => TrashResult(
+        (j['trashed'] as List?)?.cast<String>() ?? const [],
+        (j['edges_removed'] as List?)?.cast<String>() ?? const [],
+      );
+}
+
+/// GET /api/trash
+class Trash {
+  const Trash(this.nodes, this.hiddenEdges);
+  final List<TrashedNode> nodes;
+  final List<HiddenEdge> hiddenEdges;
+
+  factory Trash.fromJson(Map<String, dynamic> j) => Trash(
+        [for (final n in (j['nodes'] as List? ?? const [])) TrashedNode.fromJson(n as Map<String, dynamic>)],
+        [for (final e in (j['hidden_edges'] as List? ?? const [])) HiddenEdge.fromJson(e as Map<String, dynamic>)],
+      );
+}
+
+class TrashedNode {
+  const TrashedNode(this.node, {this.trashedAt, this.purgeAt, this.withIds = const [], this.renamedTo});
+  final MemoryNode node;
+  final DateTime? trashedAt;
+
+  /// Cuándo se borra para siempre (30 días).
+  final DateTime? purgeAt;
+
+  /// Lo que se llevó consigo (p. ej. los datos de una entidad).
+  final List<String> withIds;
+
+  /// Si fue una etiqueta renombrada (fusionada): el nombre nuevo.
+  final String? renamedTo;
+
+  factory TrashedNode.fromJson(Map<String, dynamic> j) => TrashedNode(
+        MemoryNode.fromJson(j),
+        trashedAt: _date(j['trashed_at']),
+        purgeAt: _date(j['purge_at']),
+        withIds: (j['with'] as List?)?.cast<String>() ?? const [],
+        renamedTo: j['renamed_to'] as String?,
+      );
+}
+
+class HiddenEdge {
+  const HiddenEdge(this.edge, this.hiddenAt);
+  final MemoryEdge edge;
+  final DateTime? hiddenAt;
+
+  factory HiddenEdge.fromJson(Map<String, dynamic> j) => HiddenEdge(MemoryEdge.fromJson(j), _date(j['hidden_at']));
 }
