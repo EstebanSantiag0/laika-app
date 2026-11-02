@@ -111,4 +111,4 @@
 
 ### Siguiente
 - Esteban: dar OK para purgar los items "PRUEBA SB8" (ids 2–18) y sus avisos 📚 del chat (lo hace cc-server).
-- Push de laika-app (todo está en commits locales) con el OK de Esteban, tras revisar el diff sin secretos.
+- Subido a GitHub (a6cbd46) después de que pasaron todas las pruebas y el diff salió sin secretos.
