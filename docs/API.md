@@ -118,6 +118,14 @@ Segundo cerebro (en vivo desde SB7/SB7b; probado con `tool/live_test.dart`, ver 
 | `POST/PATCH/DELETE /api/edges`, `…/restore` | `createEdge()`, `patchEdge()`, `deleteEdge()`, `restoreEdge()` |
 | `GET /api/trash` | `trash()` → `Trash` |
 
+Desde la caja de la mascota:
+| Endpoint | En la app |
+|---|---|
+| `GET/PUT /api/settings` | `settings()` / `updateSettings({practice_lang})`: chip de idioma (en, ru, zh). UNA lectura al abrir la caja tras despertar; el evento WS `settings` lo mantiene al día |
+| `POST /api/voice` (multipart `file`, ≤ 20 MB) | `sendVoice()`: nota de voz `voz.ogg` (Opus); se transcribe y entra al chat; la respuesta llega por `/ws` |
+| `{"type":"typing","recording":true}` | `recording(true)` cada ~2 s mientras grabas (Laika no contesta mientras) |
+| `POST /api/items` con `comment=true` | `uploadItem(…, comment: true)`: archivos y capturas desde la mascota. Se guarda igual (201/200/restored) y, aparte, entra al chat "📎 <título>" y Laika lo comenta (texto OCR de una imagen; resumen o inicio de un documento). Servidor d61edda |
+
 `SaveResult` al guardar:
 - `201` → `created` ("Guardado como …").
 - `200 {duplicate: true}` → `duplicate` ("Ya lo tenías guardado").

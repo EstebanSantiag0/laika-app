@@ -121,3 +121,17 @@
 - Esteban: se dormía mientras le escribía. Ahora no se duerme mientras hay texto sin mandar; si borras todo, los 15 s
   cuentan desde ahí.
 - Esteban: "todo lo demás está bien" (despertar, chat, doble clic, arrastrar).
+
+## 2026-11-02 (noche, 2) — la caja de la mascota: (+) ____ (🎤/✈)
+- Esteban: desde la mascota no podía cambiar el idioma, mandar archivos/capturas ni grabar voz.
+- Caja nueva (`PetSkin.composer`, estilo Laika en `variants/laika.dart`): **(+)** abre *Archivo* / *Captura de
+  pantalla*; a la derecha **🎤**, que se vuelve el **avioncito** al escribir o grabar (como WhatsApp).
+- Encima, chip de idioma **RU ▾** → English / Русский / 中文 (`PUT /api/settings`).
+- Captura: Esteban eligió **región** (Spectacle `-r`); Laika se esconde mientras eliges (sin zona de clics).
+- Archivos y capturas: van a la biblioteca y **Laika los comenta** (`comment=true`, servidor d61edda).
+- Voz: `pw-record` → Opus con `ffmpeg` → `POST /api/voice`; ✕ cancela; no se duerme mientras grabas.
+- `lib/core/media.dart` (Linux); en las pruebas, uno falso. 25 pruebas OK, capturas regeneradas.
+- Servidor: purgados los datos "PRUEBA SB8" (items 2–20 y 16 avisos), con el OK de Esteban.
+
+### Siguiente
+- Esteban: probar en `--pet` el idioma, una nota de voz, un archivo y una captura con el servidor real.
