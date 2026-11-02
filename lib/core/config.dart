@@ -55,8 +55,13 @@ class LaikaConfig {
 
   // ── Archivo ──────────────────────────────────────────────────────────────
 
+  /// Las pruebas usan una carpeta temporal (test/flutter_test_config.dart):
+  /// nunca tocan el config.json de verdad.
+  static String? dirForTests;
+
   /// ~/.config/laika (o $XDG_CONFIG_HOME/laika).
   static String? dir() {
+    if (dirForTests != null) return dirForTests;
     final xdg = Platform.environment['XDG_CONFIG_HOME'];
     if (xdg != null && xdg.isNotEmpty) return '$xdg/laika';
     final home = Platform.environment['HOME'];
