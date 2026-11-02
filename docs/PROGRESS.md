@@ -112,3 +112,12 @@
 ### Siguiente
 - Esteban: dar OK para purgar los items "PRUEBA SB8" (ids 2–20) y sus avisos 📚 del chat (lo hace cc-server).
 - Subido a GitHub (a6cbd46) después de que pasaron todas las pruebas y el diff salió sin secretos.
+
+## 2026-11-02 (noche) — Esteban probó `--pet`
+- Los clics no le llegaban: la ventana arranca en 1280×800 y luego cubre la pantalla, y la zona de clics se quedaba
+  en el lugar viejo. Ahora se recalcula en cada layout (`PetStage`). `LAIKA_DEBUG=1` registra zonas y clics en stderr.
+- Las pruebas guardaban el servidor de ejemplo en el `config.json` real; ahora usan una carpeta temporal
+  (`test/flutter_test_config.dart`).
+- Esteban: se dormía mientras le escribía. Ahora no se duerme mientras hay texto sin mandar; si borras todo, los 15 s
+  cuentan desde ahí.
+- Esteban: "todo lo demás está bien" (despertar, chat, doble clic, arrastrar).

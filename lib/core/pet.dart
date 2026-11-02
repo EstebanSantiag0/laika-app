@@ -260,7 +260,8 @@ class PetController extends ChangeNotifier {
   void _onIdle() {
     // No se duerme a media respuesta ni con mensajes por leer.
     final now = clock.now();
-    if (_state == PetState.thinking || typing || bubbles.any((b) => b.gone.isAfter(now))) {
+    // Ni mientras le escribes (hay texto sin mandar en la caja).
+    if (_state == PetState.thinking || typing || _composing || bubbles.any((b) => b.gone.isAfter(now))) {
       touch();
       return;
     }
@@ -358,7 +359,8 @@ class PetController extends ChangeNotifier {
     if (active == _composing) return;
     _composing = active;
     api.composing(active);
-    if (active) touch();
+    // Al borrar todo, los 15 s cuentan desde ahí (no desde la primera letra).
+    touch();
   }
 
   Future<void> send(String text) async {

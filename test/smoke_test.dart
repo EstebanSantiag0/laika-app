@@ -2,6 +2,7 @@
 // servidor (simulado) responde, contesta, se duerme a los 15 s, y las
 // pestañas Cerebro y Agenda se dibujan sin errores.
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -150,6 +151,26 @@ void main() {
     expect(c.mood, Mood.greeting, reason: 'saluda al despertar');
     c.dispose();
     api.dispose();
+  });
+
+  test('no se duerme mientras le escribes (Esteban, 2026-11-02)', () {
+    fakeAsync((fa) {
+      final api = MockLaika()..latency = Duration.zero;
+      final c = PetController(api, idle: const Duration(seconds: 15));
+      c.hover();
+      fa.elapse(const Duration(seconds: 1));
+      expect(c.isAwake, isTrue);
+      c.composing(true); // primera letra
+      fa.elapse(const Duration(minutes: 2)); // escribe un mensaje largo
+      expect(c.isAwake, isTrue, reason: 'hay texto sin mandar');
+      c.composing(false); // borró todo
+      fa.elapse(const Duration(seconds: 10));
+      expect(c.isAwake, isTrue, reason: 'los 15 s cuentan desde que borró');
+      fa.elapse(const Duration(minutes: 2));
+      expect(c.isAwake, isFalse, reason: 'sin texto y sin burbujas, sí se duerme');
+      c.dispose();
+      api.dispose();
+    });
   });
 
   test('cada burbuja dura su tiempo de lectura', () {
