@@ -40,11 +40,11 @@ abstract class LaikaApi {
   /// GET /api/items/{id}
   Future<Item> item(int id);
 
-  /// POST /api/items con {text} o {url}. Devuelve el item y si ya existía.
-  Future<(Item, bool)> createItem({String? text, String? url, String? kind, List<String>? areas, List<String>? tags, String? note});
+  /// POST /api/items con {text} o {url}. Devuelve el item y si es nuevo, ya existía o volvió de la papelera.
+  Future<(Item, SaveResult)> createItem({String? text, String? url, String? kind, List<String>? areas, List<String>? tags, String? note});
 
   /// POST /api/items multipart (un archivo: PDF, libro, imagen…).
-  Future<(Item, bool)> uploadItem(String path, {String? kind, List<String>? areas, List<String>? tags, String? note});
+  Future<(Item, SaveResult)> uploadItem(String path, {String? kind, List<String>? areas, List<String>? tags, String? note});
 
   /// PATCH /api/items/{id}: kind/areas/tags/note/title/status.
   Future<Item> patchItem(int id, Map<String, Object?> fields);
@@ -73,7 +73,7 @@ abstract class LaikaApi {
   // ── Editar el grafo ─────────────────────────────────────────────────────
 
   /// PATCH /api/nodes/{node_id}. Con [baseUpdatedAt], 409 si alguien lo cambió antes.
-  Future<NodeUpdate> patchNode(String nodeId, Map<String, Object?> fields, {DateTime? baseUpdatedAt});
+  Future<NodeUpdate> patchNode(String nodeId, Map<String, Object?> fields, {String? baseUpdatedAt});
 
   /// PATCH de una etiqueta con dry_run: (con cuál se fusionaría o null, cuántos nodos cambian).
   Future<(String?, int)> tagRenamePreview(String nodeId, String name);

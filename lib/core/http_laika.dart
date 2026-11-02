@@ -100,6 +100,10 @@ class HttpLaika implements LaikaApi {
 
   // ── Segundo cerebro ─────────────────────────────────────────────────────
 
+  static SaveResult _saved(Map<String, dynamic> j) => j['restored'] == true
+      ? SaveResult.restored
+      : (j['duplicate'] == true ? SaveResult.duplicate : SaveResult.created);
+
   static Item _item(Object? j) => Item.fromJson((j as Map<String, dynamic>)['item'] as Map<String, dynamic>);
 
   @override
@@ -121,7 +125,7 @@ class HttpLaika implements LaikaApi {
   Future<Item> item(int id) async => _item(await _request('GET', '/api/items/$id'));
 
   @override
-  Future<(Item, bool)> createItem({String? text, String? url, String? kind, List<String>? areas, List<String>? tags, String? note}) async {
+  Future<(Item, SaveResult)> createItem({String? text, String? url, String? kind, List<String>? areas, List<String>? tags, String? note}) async {
     final j = await _request('POST', '/api/items',
         body: {
           'url': ?url,
@@ -132,11 +136,11 @@ class HttpLaika implements LaikaApi {
           if (note != null && note.isNotEmpty) 'note': note,
         },
         timeout: const Duration(seconds: 60)) as Map<String, dynamic>; // sin kind, Laika lo clasifica (una llamada al modelo)
-    return (_item(j), j['duplicate'] == true);
+    return (_item(j), _saved(j));
   }
 
   @override
-  Future<(Item, bool)> uploadItem(String path, {String? kind, List<String>? areas, List<String>? tags, String? note}) async {
+  Future<(Item, SaveResult)> uploadItem(String path, {String? kind, List<String>? areas, List<String>? tags, String? note}) async {
     final file = File(path);
     final name = path.split(Platform.pathSeparator).last;
     final boundary = 'laika-${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}';
@@ -167,7 +171,7 @@ class HttpLaika implements LaikaApi {
     }
     _check(res.statusCode, text);
     final j = jsonDecode(text) as Map<String, dynamic>;
-    return (_item(j), j['duplicate'] == true);
+    return (_item(j), _saved(j));
   }
 
   @override
@@ -212,10 +216,10 @@ class HttpLaika implements LaikaApi {
   }
 
   @override
-  Future<NodeUpdate> patchNode(String nodeId, Map<String, Object?> fields, {DateTime? baseUpdatedAt}) async {
+  Future<NodeUpdate> patchNode(String nodeId, Map<String, Object?> fields, {String? baseUpdatedAt}) async {
     final j = await _request('PATCH', '/api/nodes/${_seg(nodeId)}', body: {
       ...fields,
-      if (baseUpdatedAt != null) 'base_updated_at': baseUpdatedAt.toIso8601String(),
+      'base_updated_at': ?baseUpdatedAt,
     }) as Map<String, dynamic>;
     return NodeUpdate(MemoryNode.fromJson(j['node'] as Map<String, dynamic>),
         [for (final e in (j['edges'] as List? ?? const [])) MemoryEdge.fromJson(e as Map<String, dynamic>)]);

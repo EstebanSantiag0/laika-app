@@ -261,11 +261,17 @@ class MockLaika implements LaikaApi {
       _items.firstWhere((i) => i.id == id, orElse: () => throw const LaikaApiError(404, 'No existe'));
 
   @override
-  Future<(Item, bool)> createItem({String? text, String? url, String? kind, List<String>? areas, List<String>? tags, String? note}) async {
+  Future<(Item, SaveResult)> createItem({String? text, String? url, String? kind, List<String>? areas, List<String>? tags, String? note}) async {
     await _net();
     if (url != null) {
       final old = _items.where((i) => i.url == url).firstOrNull;
-      if (old != null) return (old, true);
+      if (old != null) return (old, SaveResult.duplicate);
+      final t = _trash.indexWhere((t) => t.$4?.url == url);
+      if (t >= 0) {
+        final it = _trash[t].$4!;
+        await restoreNode(it.nodeId);
+        return (it, SaveResult.restored);
+      }
     }
     final t = (text ?? '').trim();
     final guessed = kind ?? (url != null ? 'saved' : (RegExp(r'\b(ver|leer|después|luego|later)\b').hasMatch(t.toLowerCase()) ? 'for_later' : 'idea'));
@@ -284,11 +290,11 @@ class MockLaika implements LaikaApi {
     );
     _items.add(it);
     _events.add(ItemEvent(it));
-    return (it, false);
+    return (it, SaveResult.created);
   }
 
   @override
-  Future<(Item, bool)> uploadItem(String path, {String? kind, List<String>? areas, List<String>? tags, String? note}) async {
+  Future<(Item, SaveResult)> uploadItem(String path, {String? kind, List<String>? areas, List<String>? tags, String? note}) async {
     await _net();
     final name = path.split('/').last;
     final pdf = name.toLowerCase().endsWith('.pdf');
@@ -307,7 +313,7 @@ class MockLaika implements LaikaApi {
     _items.add(it);
     _events.add(ItemEvent(it));
     _events.add(LibraryEvent('📚 Leyendo «$name»…'));
-    return (it, false);
+    return (it, SaveResult.created);
   }
 
   @override
@@ -410,12 +416,13 @@ class MockLaika implements LaikaApi {
   // ── Editar el grafo (simulado) ───────────────────────────────────────────
 
   @override
-  Future<NodeUpdate> patchNode(String nodeId, Map<String, Object?> fields, {DateTime? baseUpdatedAt}) async {
+  Future<NodeUpdate> patchNode(String nodeId, Map<String, Object?> fields, {String? baseUpdatedAt}) async {
     await _net();
     final g = _fullGraph();
     final old = g.nodeById[nodeId];
     if (old == null) throw const LaikaApiError(404, 'No existe');
-    if (baseUpdatedAt != null && old.updatedAt != null && old.updatedAt!.isAfter(baseUpdatedAt)) {
+    final base = baseUpdatedAt == null ? null : DateTime.tryParse(baseUpdatedAt);
+    if (base != null && old.updatedAt != null && old.updatedAt!.isAfter(base)) {
       throw LaikaApiError(409, 'Alguien lo cambió antes que tú', nodeId: nodeId);
     }
     for (final k in fields.keys) {

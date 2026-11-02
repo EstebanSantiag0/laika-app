@@ -98,3 +98,17 @@
 - Esteban: probar `--pet` con estos cambios y decir si le gustan la cara de comer y los puntos negros.
 - Pantallas del segundo cerebro (guardados, búsqueda con páginas, gustos, editar el grafo) contra el simulador,
   cuando Esteban diga; luego cambiar a la API real cuando cc-server avise que SB7/SB7b están en vivo.
+
+## 2026-11-02 (tarde) — segundo cerebro + prueba en vivo SB8
+- Pantallas **Guardados** (capturar texto/link, subir archivo, buscar con páginas, filtros, detalle con páginas del PDF)
+  y **Gustos**; en **Cerebro**: editar, conectar, borrar a la papelera (con Deshacer) y recuperar.
+- Cliente real y simulado con todo el contrato (`docs/API.md`). 20 pruebas OK, `flutter analyze` limpio.
+- **SB8 (prueba en vivo con el servidor):** `tool/live_test.dart`, 7/7 OK (lecturas, guardar/duplicado/409/422,
+  PDF leído y buscado con página, imagen, volver de la papelera, editar el grafo, eventos por WS).
+  Solo usa datos "PRUEBA SB8" y al final los manda a la papelera. La URL va en `LAIKA_SERVER` (nunca en el repo).
+  Fallos encontrados y arreglados: en la app, `base_updated_at` se manda tal cual; en el servidor (55b3e4b), volver
+  a subir algo que estaba en la papelera ahora lo recupera (`restored: true`) y `base_updated_at` se compara como instante.
+
+### Siguiente
+- Esteban: dar OK para purgar los items "PRUEBA SB8" (ids 2–18) y sus avisos 📚 del chat (lo hace cc-server).
+- Push de laika-app (todo está en commits locales) con el OK de Esteban, tras revisar el diff sin secretos.

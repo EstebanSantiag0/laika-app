@@ -100,6 +100,29 @@ App → servidor:
 | `/ws` | `LaikaApi.events` (`BubbleEvent`, `TypingEvent`, `ReminderEvent`, `MemoryEvent`, `LibraryEvent`, `ItemEvent`) y `send()` |
 | `/api/resurface` | `LaikaApi.resurface()` → `List<Item>` (segundo cerebro, plan SB7; acepta `[...]` o `{items: [...]}`; si falla, lista vacía) |
 
-Segundo cerebro (contrato propuesto en `docs/PLAN-second-brain.md` §5 del servidor, aún no en vivo):
+Segundo cerebro (en vivo desde SB7/SB7b; probado con `tool/live_test.dart`, ver abajo):
 - `{"type": "item", "item": {...}}` por `/ws` → `ItemEvent`. Un `kind` desconocido se lee como `saved`.
 - Los avisos de la biblioteca (`role: "system"`, texto que empieza con `📚`) → `LibraryEvent` (Laika come).
+
+| Endpoint | En la app |
+|---|---|
+| `GET /api/items` (`kind`, `status`, `tag`, `before`, `limit`) | `items()` → `ItemPage` (`next_before` para paginar) |
+| `GET/PATCH /api/items/{id}` | `item()` / `patchItem()` (`base_updated_at` se manda tal cual llegó; si cambió → 409) |
+| `POST /api/items` `{text}` o `{url}` | `createItem()` → `(Item, SaveResult)` |
+| `POST /api/items/upload` (multipart, campo `file`) | `uploadItem()` → `(Item, SaveResult)` |
+| `POST /api/items/{id}/resurface` | `resurfaceAction()` (`done`, `later`, …) |
+| `GET /api/items/{id}/page/{n}.png`, `/file` | `pageImage()`, `fileUrl()` |
+| `GET /api/search?q=` | `search()` → `List<SearchHit>` (con páginas: "p. 3–4") |
+| `GET /api/tags`, `GET/PATCH /api/likes` | `tags()`, `likes()`, `patchLike()` |
+| `PATCH/DELETE /api/nodes/{id}`, `POST …/restore` | `patchNode()`, `deleteNode(withFacts, dryRun)`, `restoreNode()` |
+| `POST/PATCH/DELETE /api/edges`, `…/restore` | `createEdge()`, `patchEdge()`, `deleteEdge()`, `restoreEdge()` |
+| `GET /api/trash` | `trash()` → `Trash` |
+
+`SaveResult` al guardar:
+- `201` → `created` ("Guardado como …").
+- `200 {duplicate: true}` → `duplicate` ("Ya lo tenías guardado").
+- `201 {restored: true}` → `restored`: el mismo archivo o URL estaba en la papelera y **volvió** con el mismo id
+  ("Estaba en la papelera: «…» volvió"; en el chat llega "📚 «…» was in the trash: it's back").
+
+Errores: `{error, field?, max_mb?, node_id?}` → `LaikaApiError` (404, 409 conflicto, 413 archivo grande, 422 campo).
+`base_updated_at` se compara como instante (cualquier zona horaria); si no es una fecha → 422 `field=base_updated_at`.

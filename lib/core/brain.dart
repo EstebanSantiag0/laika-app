@@ -77,7 +77,7 @@ class BrainController extends ChangeNotifier {
   /// servidor contesta 409: se recarga y se avisa con [LaikaApiError.conflict].
   Future<void> edit(MemoryNode node, Map<String, Object?> fields) async {
     try {
-      await api.patchNode(node.id, fields, baseUpdatedAt: node.updatedAt);
+      await api.patchNode(node.id, fields, baseUpdatedAt: node.updatedAtRaw ?? node.updatedAt?.toIso8601String());
     } finally {
       await load();
     }

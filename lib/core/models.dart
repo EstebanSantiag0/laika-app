@@ -106,6 +106,7 @@ class MemoryNode {
     this.editable = const [],
     this.deletable = false,
     this.updatedAt,
+    this.updatedAtRaw,
     this.itemKind,
     this.tags = const [],
     this.url,
@@ -121,6 +122,9 @@ class MemoryNode {
 
   /// Para no pisar una edición más nueva (PATCH con base_updated_at → 409).
   final DateTime? updatedAt;
+
+  /// updated_at tal como lo mandó el servidor: se devuelve igualito en base_updated_at.
+  final String? updatedAtRaw;
 
   /// Solo cosas guardadas: idea | for_later | saved.
   final String? itemKind;
@@ -184,6 +188,7 @@ class MemoryNode {
         editable: (j['editable'] as List?)?.cast<String>() ?? const [],
         deletable: j['deletable'] == true,
         updatedAt: _date(j['updated_at']),
+        updatedAtRaw: j['updated_at'] as String?,
         itemKind: kind == NodeKind.item ? (Item.kinds.contains(j['kind']) ? j['kind'] as String : 'saved') : null,
         tags: (j['tags'] as List?)?.cast<String>() ?? const [],
         url: j['url'] as String?,
@@ -212,6 +217,7 @@ class MemoryNode {
         editable: const [], // un dato oculto no se edita hasta mostrarlo
         deletable: deletable,
         updatedAt: updatedAt,
+        updatedAtRaw: updatedAtRaw,
         itemKind: itemKind,
         polarity: polarity,
       );
@@ -221,7 +227,7 @@ class MemoryNode {
         'kind': itemKind ?? kind.wire,
         if (editable.isNotEmpty) 'editable': editable,
         'deletable': deletable,
-        if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
+        if (updatedAt != null) 'updated_at': updatedAtRaw ?? updatedAt!.toIso8601String(),
         if (tags.isNotEmpty) 'tags': tags,
         if (url != null) 'url': url,
         if (polarity != null) 'polarity': polarity,
@@ -498,6 +504,7 @@ class Item {
     this.doc,
     this.createdAt,
     this.updatedAt,
+    this.updatedAtRaw,
     this.resurfaceAt,
   });
 
@@ -522,6 +529,9 @@ class Item {
   final ItemDoc? doc;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+
+  /// updated_at tal como lo mandó el servidor (para base_updated_at).
+  final String? updatedAtRaw;
   final DateTime? resurfaceAt;
 
   static const kinds = {'idea', 'for_later', 'saved'};
@@ -544,6 +554,7 @@ class Item {
         doc: j['doc'] is Map<String, dynamic> ? ItemDoc.fromJson(j['doc'] as Map<String, dynamic>) : null,
         createdAt: _date(j['created_at']),
         updatedAt: _date(j['updated_at']),
+        updatedAtRaw: j['updated_at'] as String?,
         resurfaceAt: _date(j['resurface_at']),
       );
 
@@ -609,6 +620,10 @@ class ItemDoc {
         pages: (j['pages'] as num?)?.toInt(),
       );
 }
+
+/// Cómo quedó un POST /api/items: nuevo (201), ya estaba (200 duplicate) o
+/// estaba en la papelera y volvió (201 restored).
+enum SaveResult { created, duplicate, restored }
 
 /// Una página de GET /api/items.
 class ItemPage {

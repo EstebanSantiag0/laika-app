@@ -103,19 +103,27 @@ class SecondBrainController extends ChangeNotifier {
     text = text.trim();
     if (text.isEmpty) return '';
     final isUrl = _url.hasMatch(text);
-    final (item, dup) = await api.createItem(text: isUrl ? null : text, url: isUrl ? text : null, kind: kind);
+    final (item, how) = await api.createItem(text: isUrl ? null : text, url: isUrl ? text : null, kind: kind);
     _upsert(item);
-    return dup ? 'Ya lo tenías guardado: «${item.displayTitle}»' : 'Guardado como ${item.kindLabel.toLowerCase()} 🐾';
+    return switch (how) {
+      SaveResult.duplicate => 'Ya lo tenías guardado: «${item.displayTitle}»',
+      SaveResult.restored => 'Estaba en la papelera: «${item.displayTitle}» volvió',
+      SaveResult.created => 'Guardado como ${item.kindLabel.toLowerCase()} 🐾',
+    };
   }
 
   Future<String> upload(String path, {String? kind}) async {
-    final (item, dup) = await api.uploadItem(path, kind: kind);
+    final (item, how) = await api.uploadItem(path, kind: kind);
     _upsert(item);
-    return dup ? 'Ese archivo ya estaba: «${item.displayTitle}»' : 'Se lo diste a Laika: «${item.displayTitle}» 📚';
+    return switch (how) {
+      SaveResult.duplicate => 'Ese archivo ya estaba: «${item.displayTitle}»',
+      SaveResult.restored => 'Estaba en la papelera: «${item.displayTitle}» volvió',
+      SaveResult.created => 'Se lo diste a Laika: «${item.displayTitle}» 📚',
+    };
   }
 
   Future<void> patch(Item it, Map<String, Object?> fields) async {
-    _upsert(await api.patchItem(it.id, {...fields, if (it.updatedAt != null) 'base_updated_at': it.updatedAt!.toIso8601String()}));
+    _upsert(await api.patchItem(it.id, {...fields, 'base_updated_at': ?(it.updatedAtRaw ?? it.updatedAt?.toIso8601String())}));
   }
 
   /// Manda el item a la papelera. Devuelve lo que se llevó (para el aviso con "Deshacer").
