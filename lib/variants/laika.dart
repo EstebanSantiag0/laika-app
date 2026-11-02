@@ -140,34 +140,50 @@ class LaikaSkin extends PetSkin {
 
   /// Cuadro de diálogo estilo Pixel (doble borde, letra por letra) en colores Cristal.
   @override
-  Widget bubble(BuildContext context, String text, {required bool petOnRight, required int age}) => Opacity(
-        opacity: (1 - age * 0.18).clamp(0.4, 1.0),
+  Widget bubble(BuildContext context, String text, {required bool petOnRight, required int age}) => Container(
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.88),
+          border: Border.all(color: lInk, width: 3),
+          boxShadow: [BoxShadow(color: lAccent.withValues(alpha: 0.25), blurRadius: 16, offset: const Offset(0, 6))],
+        ),
         child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.88),
-            border: Border.all(color: lInk, width: 3),
-            boxShadow: [BoxShadow(color: lAccent.withValues(alpha: 0.25), blurRadius: 16, offset: const Offset(0, 6))],
-          ),
-          child: Container(
-            margin: const EdgeInsets.all(2),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            decoration: BoxDecoration(border: Border.all(color: lLavender, width: 2)),
-            child: TweenAnimationBuilder<int>(
-              key: ValueKey(text),
-              tween: IntTween(begin: 0, end: text.length),
-              duration: Duration(milliseconds: 22 * text.length),
-              builder: (context, n, _) => Text(
-                '${text.substring(0, n)}${n == text.length && age == 0 ? ' ▼' : ''}',
-                style: _m(13.5),
-              ),
+          margin: const EdgeInsets.all(2),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          decoration: BoxDecoration(border: Border.all(color: lLavender, width: 2)),
+          child: TweenAnimationBuilder<int>(
+            key: ValueKey(text),
+            tween: IntTween(begin: 0, end: text.length),
+            duration: Duration(milliseconds: 22 * text.length),
+            builder: (context, n, _) => Text(
+              '${text.substring(0, n)}${n == text.length && age == 0 ? ' ▼' : ''}',
+              style: _m(13.5),
             ),
           ),
         ),
       );
 
   @override
-  Widget typing(BuildContext context, double t, {required bool petOnRight}) =>
-      Text('Laika escribe${'.' * (1 + (t * 4).floor() % 3)}', style: _m(12, color: lAccent, w: FontWeight.w700));
+  /// "Escribiendo…": los cuadritos que brincan de Brutal, en negro (Esteban).
+  Widget typing(BuildContext context, double t, {required bool petOnRight}) => Padding(
+        padding: const EdgeInsets.only(top: 8, right: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < 3; i++)
+              Container(
+                margin: const EdgeInsets.only(right: 7),
+                width: 13,
+                height: 13,
+                transform: Matrix4.translationValues(0, -6 * max(0, sin(t * 7 - i)), 0),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  border: Border.all(color: Colors.black, width: 2),
+                  boxShadow: [BoxShadow(color: lAccent.withValues(alpha: 0.55), offset: const Offset(3, 3))],
+                ),
+              ),
+          ],
+        ),
+      );
 
   @override
   Widget mine(BuildContext context, String text, {required bool petOnRight}) =>

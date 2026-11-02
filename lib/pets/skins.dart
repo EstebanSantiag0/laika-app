@@ -30,6 +30,7 @@ const _fallbacks = <String, List<String>>{
   'impressed': ['surprised'],
   'surprised': ['impressed'],
   'scheming': ['cheeky'],
+  'eating': ['happy'],
   'cheeky': ['happy'],
   'crying': ['ashamed'],
   'ashamed': ['crying'],
@@ -120,6 +121,7 @@ class ImageLook implements PetSkinLook {
     final dy = switch (mood) {
       Mood.happy || Mood.greeting || Mood.laughing => -sin(t * 7).abs() * 4,
       Mood.sleeping => sin(t * 1.4) * 1.5,
+      Mood.eating => (sin(t * 11) + 1) * 0.9,
       _ => sin(t * 2.2) * 1.2,
     };
     final dx = mood == Mood.crying ? sin(t * 18) * 1.5 : 0.0;

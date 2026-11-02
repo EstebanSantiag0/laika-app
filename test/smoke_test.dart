@@ -152,6 +152,62 @@ void main() {
     api.dispose();
   });
 
+  test('cada burbuja dura su tiempo de lectura', () {
+    expect(readingTime('Muy bien, sigamos con el ruso.'), const Duration(seconds: 18)); // 6 palabras × 3 s
+    expect(readingTime('你好'), const Duration(seconds: 4)); // 2 caracteres × 2 s
+    expect(readingTime('我要 kāfēi, please'), const Duration(seconds: 10)); // 2 × 2 s + 2 palabras × 3 s
+    expect(readingTime('🐾'), const Duration(seconds: 3), reason: 'mínimo 3 s');
+    final b = Bubble('hola mundo', at: DateTime(2026, 11, 2, 12));
+    expect(b.opacityAt(DateTime(2026, 11, 2, 12, 0, 5)), 1, reason: 'se lee completa 6 s');
+    expect(b.opacityAt(b.fadeStart.add(const Duration(milliseconds: 750))), closeTo(0.5, 0.01));
+    expect(b.opacityAt(b.gone), 0);
+  });
+
+  testWidgets('al despertar te recuerda algo guardado, impresionada, y no se duerme mientras lo lees',
+      (tester) async {
+    final api = MockLaika()..latency = Duration.zero;
+    final c = PetController(api);
+    c.hover();
+    await tester.pump(const Duration(milliseconds: 10));
+    expect(c.mood, Mood.greeting, reason: 'primero saluda');
+    await tester.pump(const Duration(seconds: 4));
+    expect(c.bubbles.single.text, startsWith('💡 Hace 10 días guardaste'));
+    expect(c.mood, Mood.impressed);
+    final read = c.bubbles.single.read;
+    await tester.pump(read - const Duration(seconds: 1));
+    expect(c.state, PetState.awake);
+    await tester.pump(const Duration(seconds: 3));
+    expect(c.bubbles, isEmpty);
+    await tester.pump(const Duration(seconds: 16));
+    expect(c.state, PetState.asleep);
+    c.hover();
+    await tester.pump(const Duration(seconds: 5));
+    expect(c.bubbles.where((b) => b.text.startsWith('💡')), isEmpty, reason: 'máximo uno al día');
+    c.dispose();
+    api.dispose();
+  });
+
+  testWidgets('cuando le llega un PDF o un link, come', (tester) async {
+    final api = MockLaika()..latency = Duration.zero;
+    final c = PetController(api);
+    c.hover();
+    await tester.pump(const Duration(seconds: 5));
+    api.feedPdf();
+    await tester.pump(const Duration(milliseconds: 10));
+    expect(c.mood, Mood.eating);
+    expect(c.bubbles.last.text, startsWith('📚 Leyendo'));
+    await tester.pump(const Duration(seconds: 5));
+    c.send('mira https://www.instagram.com/p/ejemplo'); // sin await: el tiempo lo avanza pump
+    await tester.pump(const Duration(milliseconds: 10));
+    expect(c.mood, Mood.eating, reason: 'un link nuevo también se lo come');
+    await tester.pump(const Duration(seconds: 3));
+    expect(c.bubbles.any((b) => b.text.startsWith('Ñam')), isTrue);
+    await tester.pump(const Duration(minutes: 5));
+    expect(c.state, PetState.asleep);
+    c.dispose();
+    api.dispose();
+  });
+
   for (final v in allVariants) {
     testWidgets('${v.id}: despierta, contesta, se duerme y dibuja todo', (tester) async {
       final c = await open(tester, v.id);
@@ -184,8 +240,14 @@ void main() {
       final bubbleText = find.textContaining(c.bubbles.last.text.substring(0, 3), findRichText: true);
       expect(tester.getTopRight(bubbleText.last).dx, lessThan(petLeft));
 
-      // 15 s sin hacer nada → se duerme.
+      // Sigue despierta mientras haya mensajes por leer (3 s por palabra)…
       await mouse.moveTo(const Offset(5, 5));
+      for (var i = 0; i < 300 && c.bubbles.isNotEmpty; i++) {
+        await tester.pump(const Duration(seconds: 1));
+      }
+      expect(c.bubbles, isEmpty, reason: 'cada burbuja se va sola al pasar su tiempo de lectura');
+      expect(c.state, PetState.awake, reason: 'no se duerme con mensajes por leer');
+      // …y 15 s después de que se desvaneció el último, se duerme.
       await tester.pump(const Duration(seconds: 16));
       expect(c.state, PetState.asleep);
       expect(c.sleepPose, SleepPose.seated, reason: 'a los 15 s duerme sentada');

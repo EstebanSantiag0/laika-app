@@ -16,6 +16,13 @@ class MockLaika implements LaikaApi {
     final t = now ?? DateTime.now();
     _graph = buildSampleGraph(t);
     _reminders = buildSampleReminders(t);
+    // Cosas guardadas de ejemplo (ficticias) para que Laika te las recuerde.
+    _items = [
+      Item(id: 1, kind: 'idea', title: 'Usar OCR para los PDFs escaneados de la escuela', format: 'text',
+          areas: const ['study'], createdAt: t.subtract(const Duration(days: 10))),
+      Item(id: 2, kind: 'for_later', title: 'Video: cómo funciona un sumador en RISC-V', format: 'video',
+          areas: const ['projects'], createdAt: t.subtract(const Duration(days: 3))),
+    ];
     _ticker = Timer.periodic(const Duration(seconds: 2), (_) => _checkReminders());
   }
 
@@ -30,6 +37,8 @@ class MockLaika implements LaikaApi {
 
   late MemoryGraph _graph;
   late List<Reminder> _reminders;
+  late List<Item> _items;
+  int _nextItem = 100;
   late final Timer _ticker;
   final _events = StreamController<LaikaEvent>.broadcast();
   final _rng = Random(7);
@@ -110,6 +119,35 @@ class MockLaika implements LaikaApi {
     }
   }
 
+  // ── Segundo cerebro ──────────────────────────────────────────────────────
+
+  @override
+  Future<List<Item>> resurface() async {
+    await _net();
+    final now = DateTime.now();
+    return _items
+        .where((i) => i.status == 'active' && now.difference(i.createdAt ?? now).inDays >= 3)
+        .take(3)
+        .toList();
+  }
+
+  Item _save(String title, String format, {String kind = 'saved', String? url}) {
+    final it = Item(id: _nextItem++, kind: kind, title: title, format: format, url: url, createdAt: DateTime.now());
+    _items.add(it);
+    _events.add(ItemEvent(it));
+    return it;
+  }
+
+  /// Botón del panel: le llega un PDF (come, lo "lee" y avisa cuando está listo).
+  Future<void> feedPdf() async {
+    final it = _save('Apuntes de Señales y sistemas.pdf', 'pdf');
+    _events.add(LibraryEvent('📚 Leyendo «${it.title}»… (4 capítulos)'));
+    await Future<void>.delayed(const Duration(seconds: 6));
+    _events.add(LibraryEvent('📚 «${it.title}» ya está en la biblioteca (4 capítulos)'));
+  }
+
+  static final _urlRe = RegExp(r'https?://\S+');
+
   // ── Chat ─────────────────────────────────────────────────────────────────
 
   @override
@@ -134,6 +172,14 @@ class MockLaika implements LaikaApi {
 
   List<String> _reply(String text) {
     final t = text.toLowerCase();
+
+    final link = _urlRe.firstMatch(text);
+    if (link != null) {
+      final url = link.group(0)!;
+      final video = RegExp(r'instagram|youtu|tiktok').hasMatch(url);
+      _save(Uri.tryParse(url)?.host ?? url, video ? 'video' : 'link', url: url);
+      return ['Ñam 🔗 lo guardé en tu segundo cerebro.', video ? 'Cuando lo transcriba te cuento de qué trata.' : 'Luego lo leo y te digo de qué trata.'];
+    }
 
     final m = _remindRe.firstMatch(text);
     if (m != null) return _createReminder(m.group(2) ?? '');

@@ -132,24 +132,20 @@ class _CosmosSkin extends PetSkin {
 
   @override
   Widget bubble(BuildContext context, String text, {required bool petOnRight, required int age}) {
-    final o = (1 - age * 0.18).clamp(0.35, 1.0);
-    return Opacity(
-      opacity: o,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xCC0B1026),
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(18),
-            topRight: const Radius.circular(18),
-            bottomLeft: Radius.circular(petOnRight ? 18 : 4),
-            bottomRight: Radius.circular(petOnRight ? 4 : 18),
-          ),
-          border: Border.all(color: _cyan.withValues(alpha: 0.6)),
-          boxShadow: [BoxShadow(color: _cyan.withValues(alpha: 0.25 * o), blurRadius: 16)],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xCC0B1026),
+        borderRadius: BorderRadius.only(
+          topLeft: const Radius.circular(18),
+          topRight: const Radius.circular(18),
+          bottomLeft: Radius.circular(petOnRight ? 18 : 4),
+          bottomRight: Radius.circular(petOnRight ? 4 : 18),
         ),
-        child: Text(text, style: const TextStyle(color: _ink, fontSize: 14, height: 1.3)),
+        border: Border.all(color: _cyan.withValues(alpha: 0.6)),
+        boxShadow: [BoxShadow(color: _cyan.withValues(alpha: 0.25), blurRadius: 16)],
       ),
+      child: Text(text, style: const TextStyle(color: _ink, fontSize: 14, height: 1.3)),
     );
   }
 

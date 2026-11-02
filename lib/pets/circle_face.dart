@@ -23,7 +23,7 @@ enum _Eye { open, happy, closed, heart, squeeze, wide, sparkle, sad, angry, half
 
 enum _Brow { none, angry, worried, raised }
 
-enum _Mouth { w, open, big, o, smirk, wavy, flat, tongue }
+enum _Mouth { w, open, big, o, smirk, wavy, flat, tongue, chew }
 
 class CircleFacePainter extends CustomPainter {
   CircleFacePainter({required this.mood, this.lying = false, required this.t, this.bell = false});
@@ -80,6 +80,7 @@ class CircleFacePainter extends CustomPainter {
       Mood.ashamed => ((_Eye.sad, _Eye.sad), _Brow.worried, _Mouth.wavy, 1.0),
       Mood.crying => ((_Eye.squeeze, _Eye.squeeze), _Brow.worried, _Mouth.big, 0.8),
       Mood.scheming => ((_Eye.angry, _Eye.angry), _Brow.angry, _Mouth.smirk, 0.3),
+      Mood.eating => ((_Eye.happy, _Eye.happy), _Brow.none, _Mouth.chew, 0.9),
       Mood.cheeky => ((_Eye.happy, _Eye.open), _Brow.none, _Mouth.tongue, 0.8),
       Mood.thinking => ((_Eye.lookUp, _Eye.lookUp), _Brow.none, _Mouth.o, 0.5),
       Mood.waking => ((_Eye.sleepy, _Eye.sleepy), _Brow.none, _Mouth.o, 0.5),
@@ -114,6 +115,12 @@ class CircleFacePainter extends CustomPainter {
         rot = 0.1;
       case Mood.scheming:
         sx = 1 + sin(t * 10) * 0.012;
+      case Mood.eating:
+        // Mastica: el círculo se aplasta un poquito a cada mordida.
+        final chew = (sin(t * 11) + 1) / 2;
+        sy = 1 - chew * 0.03;
+        sx = 1 + chew * 0.015;
+        center += Offset(0, chew * 0.8);
       case Mood.sleeping when !sleepingLying:
         rot = 0.14 + sin(t * 1.4) * 0.05;
         sy = 1 - (sin(t * 1.4) + 1) * 0.015;
@@ -318,6 +325,8 @@ class CircleFacePainter extends CustomPainter {
         opened(4.6, 8);
       case _Mouth.big:
         opened(6.8, 11 + sin(t * 14) * 0.8);
+      case _Mouth.chew:
+        opened(4.4, 1.6 + (sin(t * 11) + 1) / 2 * 5.6);
       case _Mouth.o:
         c.drawOval(Rect.fromCenter(center: const Offset(0, 16), width: 3.6, height: 4.2), Paint()..color = _mouthIn);
         c.drawOval(Rect.fromCenter(center: const Offset(0, 16), width: 3.6, height: 4.2), _stroke(1.2));
@@ -413,8 +422,38 @@ class CircleFacePainter extends CustomPainter {
         }
       case Mood.cheeky:
         _star(c, Offset(88, 16 + sin(t * 4) * 1), 3.4, _pinkDeep);
+      case Mood.eating:
+        _page(c);
       case Mood.neutral || Mood.happy || Mood.ashamed || Mood.crying || Mood.waking:
         break;
+    }
+  }
+
+  /// Una hojita (el PDF, el link…) que vuela hacia su boca y desaparece.
+  void _page(Canvas c) {
+    final f = (t * 0.7) % 1;
+    final p = Offset.lerp(const Offset(86, 58), const Offset(56, 66), Curves.easeIn.transform(f))!;
+    final alpha = f < 0.8 ? 1.0 : (1 - f) / 0.2;
+    c.save();
+    c.translate(p.dx, p.dy);
+    c.rotate(-0.35 + f * 0.5);
+    c.scale(1 - f * 0.55);
+    const rect = Rect.fromLTWH(-6, -7.5, 12, 15);
+    c.drawRect(rect.shift(const Offset(2, 2)), Paint()..color = _ink.withValues(alpha: alpha));
+    c.drawRect(rect, Paint()..color = Colors.white.withValues(alpha: alpha));
+    c.drawRect(rect, _stroke(1.6, _ink.withValues(alpha: alpha)));
+    for (var i = 0; i < 3; i++) {
+      final y = -3.5 + i * 3.5;
+      c.drawLine(Offset(-3.5, y), Offset(i == 2 ? 1 : 3.5, y), _stroke(1.1, _lilac.withValues(alpha: alpha)));
+    }
+    c.restore();
+    // Migajas al morder.
+    if (f > 0.75) {
+      final g = (f - 0.75) / 0.25;
+      for (final (dx, dy) in [(-1.0, 0.6), (1.0, 1.0), (0.3, 1.4)]) {
+        c.drawRect(Rect.fromCenter(center: Offset(52 + dx * 9 * g, 70 + dy * 8 * g), width: 2, height: 2),
+            Paint()..color = _ink.withValues(alpha: 1 - g));
+      }
     }
   }
 

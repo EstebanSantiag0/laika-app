@@ -166,15 +166,12 @@ class _CristalSkin extends PetSkin {
       CustomPaint(painter: _BlobDog(state: c.state, t: t, bell: c.pendingReminders.isNotEmpty));
 
   @override
-  Widget bubble(BuildContext context, String text, {required bool petOnRight, required int age}) => Opacity(
-        opacity: (1 - age * 0.2).clamp(0.3, 1.0),
-        child: Frosted(
-          radius: 22,
-          blur: 14,
-          color: Colors.white.withValues(alpha: 0.55),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-          child: Text(text, style: _t(15)),
-        ),
+  Widget bubble(BuildContext context, String text, {required bool petOnRight, required int age}) => Frosted(
+        radius: 22,
+        blur: 14,
+        color: Colors.white.withValues(alpha: 0.55),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+        child: Text(text, style: _t(15)),
       );
 
   @override

@@ -167,30 +167,27 @@ class _PapelSkin extends PetSkin {
   Widget bubble(BuildContext context, String text, {required bool petOnRight, required int age}) {
     final angle = ((text.hashCode % 7) - 3) * 0.008;
     final colors = [const Color(0xFFFFF09A), const Color(0xFFFFD6E0), const Color(0xFFD7F0C2)];
-    return Opacity(
-      opacity: (1 - age * 0.15).clamp(0.4, 1.0),
-      child: Transform.rotate(
-        angle: angle,
-        child: Stack(clipBehavior: Clip.none, children: [
-          Container(
-            padding: const EdgeInsets.fromLTRB(14, 16, 14, 12),
-            decoration: BoxDecoration(
-              color: colors[text.length % colors.length],
-              boxShadow: const [BoxShadow(color: Color(0x33000000), offset: Offset(2, 3), blurRadius: 3)],
-            ),
-            child: Text(text, style: _hand(16)),
+    return Transform.rotate(
+      angle: angle,
+      child: Stack(clipBehavior: Clip.none, children: [
+        Container(
+          padding: const EdgeInsets.fromLTRB(14, 16, 14, 12),
+          decoration: BoxDecoration(
+            color: colors[text.length % colors.length],
+            boxShadow: const [BoxShadow(color: Color(0x33000000), offset: Offset(2, 3), blurRadius: 3)],
           ),
-          Positioned(
-            top: -8,
-            left: petOnRight ? null : 18,
-            right: petOnRight ? 18 : null,
-            child: Transform.rotate(
-              angle: -0.08,
-              child: Container(width: 54, height: 16, color: const Color(0x99E8E2D0)),
-            ),
+          child: Text(text, style: _hand(16)),
+        ),
+        Positioned(
+          top: -8,
+          left: petOnRight ? null : 18,
+          right: petOnRight ? 18 : null,
+          child: Transform.rotate(
+            angle: -0.08,
+            child: Container(width: 54, height: 16, color: const Color(0x99E8E2D0)),
           ),
-        ]),
-      ),
+        ),
+      ]),
     );
   }
 

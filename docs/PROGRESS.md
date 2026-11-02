@@ -1,6 +1,6 @@
 # Progreso — retomar aquí
 
-**Última actualización:** 2026-11-01 (noche) · **Estado:** diseño final + modo escritorio `--pet` + cliente real. Falta que Esteban lo pruebe.
+**Última actualización:** 2026-11-02 · **Estado:** diseño final + modo escritorio `--pet` + cliente real. Falta que Esteban lo pruebe.
 
 ## Hecho
 - Proyecto Flutter (Linux + Android). Build de Linux release OK.
@@ -80,3 +80,21 @@
 - El servidor ya es público: https://github.com/EstebanSantiag0/laika (MIT). Revisado desde aquí: sin hostname del
   tailnet, correos, bases de datos ni tokens. Nuevo en el servidor: `user.name`/`user.pronouns`/`user.gender` en
   config.yaml y `scripts/setup.py`. El contrato de la API y del WebSocket no cambió.
+
+## 2026-11-02 — burbujas por tiempo, Laika come, te recuerda cosas
+- Esteban: las burbujas ya **no** se desvanecen según qué tan arriba están, sino por **tiempo**: 3 s por palabra;
+  en chino 2 s por carácter + 3 s por palabra (pinyin o inglés). `readingTime` en `core/pet.dart`; la opacidad la
+  pone `PetStage` para todas las variantes. Tope de seguridad: 8 burbujas.
+- Esteban: se duerme **15 s después de que se desvanece la última burbuja**.
+- Nueva emoción **`eating`** (cara-círculo: ojos felices, mastica, una hojita vuela a su boca). Sale con eventos
+  `item` nuevos y avisos `📚` de la biblioteca. Skins: archivo `eating` (si falta, `happy`).
+- **Resurfacing** con cara `impressed`: al despertar, tras el saludo, UNA petición a `/api/resurface`; dice
+  "💡 Hace N días guardaste: «…»" (máx. 1 al día). Simulador: botón "Darle un PDF" y links en el chat.
+- Puntos de escribir del diseño Laika: los cuadritos de Brutal, en **negro** (sombra lila).
+- Modelos nuevos: `Item`, `ItemEvent`, `LibraryEvent`; `LaikaApi.resurface()`. Dependencia nueva: `clock`.
+- 15 pruebas OK, capturas regeneradas.
+
+### Siguiente
+- Esteban: probar `--pet` con estos cambios y decir si le gustan la cara de comer y los puntos negros.
+- Pantallas del segundo cerebro (guardados, búsqueda con páginas, gustos, editar el grafo) contra el simulador,
+  cuando Esteban diga; luego cambiar a la API real cuando cc-server avise que SB7/SB7b están en vivo.

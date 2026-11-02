@@ -5,6 +5,10 @@
 // real (Linux: gtk-layer-shell; Android: burbuja sobre otras apps), con la
 // misma lógica.
 //
+// Las burbujas se desvanecen por TIEMPO (su tiempo de lectura, ver
+// readingTime en pet.dart), no por qué tan arriba quedaron: la opacidad la
+// pone el escenario, igual para todas las variantes.
+//
 // Regla de las burbujas: si Laika está en la mitad derecha de la pantalla,
 // sus mensajes salen a su IZQUIERDA; si está en la mitad izquierda, salen a
 // su DERECHA. La caja de texto va en el mismo lado.
@@ -26,7 +30,8 @@ abstract class PetSkin {
   /// Laika. [t] son segundos desde que arrancó (para animar).
   Widget pet(BuildContext context, PetController c, double t);
 
-  /// Una burbuja de Laika. [age] 0 = la más nueva.
+  /// Una burbuja de Laika. [age] 0 = la más nueva (solo para el estilo: el
+  /// desvanecimiento por tiempo lo pone el escenario).
   Widget bubble(BuildContext context, String text, {required bool petOnRight, required int age});
 
   /// "Laika está escribiendo…"
@@ -167,6 +172,7 @@ class _PetStageState extends State<PetStage> with SingleTickerProviderStateMixin
                   final t = _watch.elapsedMilliseconds / 1000;
                   final cross = petOnRight ? CrossAxisAlignment.end : CrossAxisAlignment.start;
                   final n = c.bubbles.length;
+                  final now = c.now();
                   return Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: cross,
@@ -176,8 +182,11 @@ class _PetStageState extends State<PetStage> with SingleTickerProviderStateMixin
                           key: ValueKey(c.bubbles[i].id),
                           padding: const EdgeInsets.only(bottom: 8),
                           child: _Appear(
-                            child: skin.bubble(context, c.bubbles[i].text,
-                                petOnRight: petOnRight, age: n - 1 - i),
+                            child: Opacity(
+                              opacity: c.bubbles[i].opacityAt(now),
+                              child: skin.bubble(context, c.bubbles[i].text,
+                                  petOnRight: petOnRight, age: n - 1 - i),
+                            ),
                           ),
                         ),
                       if (c.typing)

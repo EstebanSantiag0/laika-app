@@ -74,6 +74,14 @@ class HttpLaika implements LaikaApi {
   @override
   Future<void> snooze(int id, {int minutes = 60}) => _request('POST', '/api/reminders/$id/snooze', body: {'minutes': minutes});
 
+  @override
+  Future<List<Item>> resurface() async {
+    final j = await _request('GET', '/api/resurface');
+    final list = j is Map ? j['items'] : j;
+    if (list is! List) return const [];
+    return list.whereType<Map<String, dynamic>>().map(Item.fromJson).toList();
+  }
+
   // ── WebSocket ─────────────────────────────────────────────────────────────
 
   Future<WebSocket> _socket() {
@@ -131,6 +139,9 @@ class HttpLaika implements LaikaApi {
         _events.add(BubbleEvent('⚠️ ${j['text'] ?? 'Laika no pudo contestar.'}'));
         _events.add(const TypingEvent(false));
         _endTurn();
+      case 'item':
+        final it = j['item'];
+        if (it is Map<String, dynamic>) _events.add(ItemEvent(Item.fromJson(it)));
       case 'reminder':
         final r = j['reminder'];
         if (r is Map<String, dynamic>) _events.add(ReminderEvent(Reminder.fromJson(r)));
@@ -150,7 +161,10 @@ class HttpLaika implements LaikaApi {
               ];
               _events.add(BubbleEvent(lines.join('\n')));
             }
-          // 'user' es el eco de lo que mandaste; 'system' (⏰) ya llega como evento "reminder".
+          case 'system' when text.startsWith('📚'):
+            // Avisos de su biblioteca: le llegó un PDF/libro (come) o no pudo leerlo.
+            _events.add(LibraryEvent(text));
+          // 'user' es el eco de lo que mandaste; los demás 'system' (⏰) ya llegan como evento "reminder".
         }
     }
   }

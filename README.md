@@ -15,9 +15,11 @@ por tiempo.
 |---|---|---|
 | ![Escritorio](docs/screenshots/laika-1-escritorio.png) | ![Cerebro](docs/screenshots/laika-2-cerebro.png) | ![Agenda](docs/screenshots/laika-3-agenda.png) |
 
-**Laika tiene 15 caras** y las cambia según lo que pasa y lo que dice (se ríe
+**Laika tiene 16 caras** y las cambia según lo que pasa y lo que dice (se ríe
 con "jaja", se sorprende cuando suena un recordatorio, trama algo cuando lo
-anota, se apena si algo falla…). Por defecto es un círculo blanco estilo
+anota, se apena si algo falla, come cuando le mandas un PDF o un link…).
+Sus mensajes se quedan el tiempo que toma leerlos (3 s por palabra; en chino
+2 s por carácter + 3 s por palabra en pinyin o inglés) y luego se desvanecen. Por defecto es un círculo blanco estilo
 Brutal; puedes darle **tu propia skin** con imágenes (ver
 [`docs/SKINS.md`](docs/SKINS.md)) y elegirla en **Ajustes**, junto con su
 tamaño y el servidor.
@@ -213,7 +215,7 @@ tiempo (Cristal).
 
 ```bash
 flutter analyze        # revisa el código
-flutter test           # 8 pruebas: despertar, burbujas a su lado, dormirse, servidor caído...
+flutter test           # 15 pruebas: despertar, burbujas a su lado, dormirse, servidor caído...
 ```
 
 Las capturas de `docs/screenshots/` se generan con las fuentes de tu sistema:
@@ -245,7 +247,7 @@ lib/
 │   ├── pet_overlay.dart   la capa transparente
 │   └── window_bridge.dart qué zonas reciben clics (canal con linux/runner)
 ├── pets/
-│   ├── circle_face.dart   la cara-círculo por defecto: 15 emociones y 2 formas de dormir
+│   ├── circle_face.dart   la cara-círculo por defecto: 16 emociones y 2 formas de dormir
 │   └── skins.dart         skins de imágenes (~/.config/laika/skins, ./skins)
 └── variants/              diseños: laika.dart (el elegido) + los 5 prototipos
     ├── laika.dart  cosmos.dart  papel.dart  pixel.dart  brutal.dart  cristal.dart

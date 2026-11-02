@@ -97,4 +97,9 @@ App → servidor:
 | `/api/graph` | `LaikaApi.graph()` → `MemoryGraph` |
 | `/api/reminders` | `LaikaApi.reminders()` → `List<Reminder>` |
 | done / snooze | `LaikaApi.markDone()` / `snooze()` |
-| `/ws` | `LaikaApi.events` (`BubbleEvent`, `TypingEvent`, `ReminderEvent`, `MemoryEvent`) y `send()` |
+| `/ws` | `LaikaApi.events` (`BubbleEvent`, `TypingEvent`, `ReminderEvent`, `MemoryEvent`, `LibraryEvent`, `ItemEvent`) y `send()` |
+| `/api/resurface` | `LaikaApi.resurface()` → `List<Item>` (segundo cerebro, plan SB7; acepta `[...]` o `{items: [...]}`; si falla, lista vacía) |
+
+Segundo cerebro (contrato propuesto en `docs/PLAN-second-brain.md` §5 del servidor, aún no en vivo):
+- `{"type": "item", "item": {...}}` por `/ws` → `ItemEvent`. Un `kind` desconocido se lee como `saved`.
+- Los avisos de la biblioteca (`role: "system"`, texto que empieza con `📚`) → `LibraryEvent` (Laika come).

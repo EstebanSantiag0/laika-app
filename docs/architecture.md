@@ -46,6 +46,12 @@ muestra y envía.
 ```
 
 - Cualquier interacción (mouse encima, escribir, recibir burbuja) reinicia los 15 s.
+- Cada burbuja se queda su **tiempo de lectura** (`readingTime`: 3 s por palabra; cada carácter chino
+  2 s + 3 s por palabra en pinyin o inglés; mínimo 3 s) y se desvanece en 1.5 s. El desvanecimiento es por
+  tiempo, no por posición (lo pone `PetStage`, igual en todas las variantes).
+- No se duerme hasta 15 s **después de que se desvanece la última burbuja** (Esteban, 2026-11-02).
+- Al despertar, después del saludo, UNA petición a `/api/resurface`: si hay algo guardado que recordarte,
+  lo dice con cara `impressed` (máximo uno al día). Si la ruta no existe, no pasa nada.
 - No se duerme mientras espera una respuesta.
 - Si el servidor deja de responder a media plática, se duerme.
 
@@ -73,6 +79,8 @@ inotify (`Directory.watch`, sin sondeo) y se actualizan al instante.
 | suena un recordatorio | `surprised` |
 | se crea un recordatorio | `scheming` |
 | aprendió algo (evento de memoria) | `impressed` |
+| te recuerda algo guardado (`/api/resurface`) | `impressed` (5 s) |
+| le llega un PDF, link o archivo (evento `item` nuevo o aviso `📚` de la biblioteca) | `eating` (4 s); si no pudo leerlo, `ashamed` |
 
 Las reacciones duran 3.5 s y luego vuelve a `neutral`.
 

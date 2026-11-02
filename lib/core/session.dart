@@ -158,10 +158,11 @@ class _SimPanelState extends State<SimPanel> {
                       Wrap(spacing: 6, runSpacing: 6, children: [
                         _btn('Dormirla ya', widget.session.pet.sleep),
                         _btn('Sonar recordatorio', api.fireNextReminderNow),
+                        _btn('Darle un PDF', api.feedPdf),
                         if (widget.onExit != null) _btn('← Galería', widget.onExit!),
                       ]),
                       const SizedBox(height: 4),
-                      const Text('Prueba: "recuérdame pagar la renta"\n"quiero aprender a soldar"',
+                      const Text('Prueba: "recuérdame pagar la renta"\n"quiero aprender a soldar"\no pega un link https://…',
                           style: TextStyle(color: Colors.white54, fontSize: 11)),
                     ],
                   ),

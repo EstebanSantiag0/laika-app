@@ -28,6 +28,10 @@ abstract class LaikaApi {
   /// POST /api/reminders/{id}/snooze
   Future<void> snooze(int id, {int minutes = 60});
 
+  /// GET /api/resurface — lo guardado que conviene recordarte hoy (máx. 3).
+  /// La mascota lo pide UNA vez, justo después de despertar.
+  Future<List<Item>> resurface();
+
   /// Avisa si estás escribiendo en la caja de texto. Laika no contesta
   /// mientras estás escribiendo ({"type":"typing","active":…}).
   void composing(bool active);

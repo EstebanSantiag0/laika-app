@@ -254,17 +254,14 @@ class _PixelSkin extends PetSkin {
 
   @override
   Widget bubble(BuildContext context, String text, {required bool petOnRight, required int age}) =>
-      Opacity(
-        opacity: age == 0 ? 1 : 0.75,
-        child: _PixBox(
-          child: TweenAnimationBuilder<int>(
-            key: ValueKey(text),
-            tween: IntTween(begin: 0, end: text.length),
-            duration: Duration(milliseconds: 25 * text.length),
-            builder: (context, n, _) => Text(
-              '${text.substring(0, n)}${n == text.length && age == 0 ? ' ▼' : ''}',
-              style: _px(14),
-            ),
+      _PixBox(
+        child: TweenAnimationBuilder<int>(
+          key: ValueKey(text),
+          tween: IntTween(begin: 0, end: text.length),
+          duration: Duration(milliseconds: 25 * text.length),
+          builder: (context, n, _) => Text(
+            '${text.substring(0, n)}${n == text.length && age == 0 ? ' ▼' : ''}',
+            style: _px(14),
           ),
         ),
       );

@@ -10,7 +10,9 @@ Esteban. El servidor vive en cc-server (`/root/docker/laika`, repo
 - **Retomar aquí:** `docs/PROGRESS.md`. Actualízalo y haz commit **en cada paso**.
 - Repo público: **nunca** datos reales de Laika (recuerdos, nombres, tailnet). `sample_data.dart` es ficticio.
 - Comportamiento de la mascota = decisiones de Esteban (no cambiarlas sin preguntar):
-  dormir tras 15 s; al hover hace UNA petición a `/health` y despierta solo si `ok && llm`;
+  dormir 15 s después de que se desvanece su última burbuja (cada una dura 3 s/palabra; chino 2 s/carácter
+  + 3 s/palabra); al hover hace UNA petición a `/health` y despierta solo si `ok && llm` (y luego UNA a
+  `/api/resurface`);
   sin sondeo en segundo plano; chat = solo caja de texto; burbujas al lado contrario del borde.
 - El README termina con la sección **Autoría** (idea y dirección de Esteban; ser exacto sobre la ayuda de Claude).
 - `sudo`: dar a Esteban el comando como `! sudo ...`.

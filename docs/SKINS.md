@@ -1,7 +1,7 @@
 # Skins: cambiar cómo se ve Laika
 
 Por defecto Laika es un **círculo blanco estilo Brutal** (borde grueso, sombra
-dura) que cambia de cara con sus 15 emociones. También puedes darle tu propia
+dura) que cambia de cara con sus 16 emociones. También puedes darle tu propia
 apariencia con imágenes.
 
 ## Formato
@@ -26,12 +26,13 @@ Una carpeta por skin, con **una imagen por emoción**:
 | `laughing` | jaja, lol, 😂 |
 | `inLove` | ❤️, te quiero |
 | `surprised` | cuando suena un recordatorio |
-| `impressed` | cuando aprende algo nuevo, wow |
+| `impressed` | cuando aprende algo nuevo, wow, o te recuerda algo que guardaste |
 | `doubting` | 🤔, hmm |
 | `ashamed` | cuando algo le sale mal |
 | `crying` | 😭, qué triste |
 | `scheming` | cuando anota un recordatorio, 😈 |
 | `cheeky` | cuando te corrige, 😜 |
+| `eating` | cuando le llega un PDF, un link o cualquier archivo (si falta, usa `happy`) |
 | `thinking` | mientras escribe su respuesta |
 | `waking` | mientras pregunta a `/health` |
 | `sleeping` | dormida (15 s sin hacerle caso) |

@@ -376,3 +376,71 @@ class MemoryEvent extends LaikaEvent {
   const MemoryEvent(this.node);
   final MemoryNode node;
 }
+
+/// Laika avisa algo de su biblioteca ("📚 Reading «…»", "📚 «…» is in the
+/// library", "📚 I couldn't add…"): llega como mensaje `system` por /ws.
+class LibraryEvent extends LaikaEvent {
+  const LibraryEvent(this.text);
+  final String text;
+
+  /// No pudo leer el archivo.
+  bool get failed => RegExp(r"couldn't|can't|no pude", caseSensitive: false).hasMatch(text);
+}
+
+/// Cambió algo guardado en su segundo cerebro: {"type":"item","item":{...}}.
+class ItemEvent extends LaikaEvent {
+  const ItemEvent(this.item);
+  final Item item;
+}
+
+/// Algo guardado en el segundo cerebro: una idea, algo para después o un
+/// archivo/link (contrato: PLAN-second-brain §5 del servidor).
+class Item {
+  const Item({
+    required this.id,
+    this.kind = 'saved',
+    this.title = '',
+    this.text = '',
+    this.format = 'text',
+    this.url,
+    this.areas = const [],
+    this.tags = const [],
+    this.status = 'active',
+    this.createdAt,
+    this.resurfaceAt,
+  });
+
+  final int id;
+
+  /// idea | for_later | saved (lo desconocido cuenta como saved).
+  final String kind;
+  final String title;
+  final String text;
+
+  /// pdf | book | link | video | image | text
+  final String format;
+  final String? url;
+  final List<String> areas;
+  final List<String> tags;
+
+  /// active | done | archived
+  final String status;
+  final DateTime? createdAt;
+  final DateTime? resurfaceAt;
+
+  static const kinds = {'idea', 'for_later', 'saved'};
+
+  factory Item.fromJson(Map<String, dynamic> j) => Item(
+        id: (j['id'] as num).toInt(),
+        kind: kinds.contains(j['kind']) ? j['kind'] as String : 'saved',
+        title: j['title'] as String? ?? '',
+        text: j['text'] as String? ?? '',
+        format: j['format'] as String? ?? 'text',
+        url: j['url'] as String?,
+        areas: (j['areas'] as List?)?.cast<String>() ?? const [],
+        tags: (j['tags'] as List?)?.cast<String>() ?? const [],
+        status: j['status'] as String? ?? 'active',
+        createdAt: _date(j['created_at']),
+        resurfaceAt: _date(j['resurface_at']),
+      );
+}

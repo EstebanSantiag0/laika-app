@@ -7,9 +7,15 @@
 //    sigue dormida.
 //  • No hay sondeo en segundo plano: solo se pregunta al servidor cuando tú
 //    la buscas.
+//  • Cada burbuja se queda el tiempo que toma leerla ([readingTime]: 3 s por
+//    palabra; en chino 2 s por carácter + 3 s por palabra en pinyin o
+//    inglés) y luego se desvanece. Laika no se duerme hasta 15 s después de
+//    que se desvaneció la última.
 
 import 'dart:async';
+import 'dart:math';
 
+import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
 
 import 'api.dart';
@@ -45,6 +51,7 @@ enum Mood {
   ashamed('Apenada', 'cuando algo le sale mal'),
   crying('Llorando', '😭, qué triste'),
   scheming('Tramando algo', 'cuando anota un recordatorio, 😈'),
+  eating('Comiendo', 'cuando le llega un PDF, un link o cualquier archivo'),
   cheeky('Traviesa', 'cuando te corrige, 😜'),
   thinking('Pensando', 'mientras escribe su respuesta'),
   waking('Despertando', 'preguntando a /health'),
@@ -73,12 +80,43 @@ enum Mood {
   }
 }
 
+final _han = RegExp(r'[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]');
+final _word = RegExp(r"[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*", unicode: true);
+
+/// Cuánto se queda una burbuja antes de desvanecerse (regla de Esteban):
+/// 3 s por palabra; cada carácter chino suma 2 s y cada palabra en pinyin o
+/// inglés dentro de un mensaje en chino, 3 s. Mínimo 3 s (p. ej. solo un emoji).
+Duration readingTime(String text) {
+  final chars = _han.allMatches(text).length;
+  final words = _word.allMatches(text.replaceAll(_han, ' ')).length;
+  return Duration(seconds: max(3, chars * 2 + words * 3));
+}
+
 class Bubble {
-  Bubble(this.text) : at = DateTime.now(), id = _n++;
+  Bubble(this.text, {DateTime? at})
+      : at = at ?? clock.now(),
+        read = readingTime(text),
+        id = _n++;
   static int _n = 0;
   final String text;
   final DateTime at;
+
+  /// Tiempo de lectura ([readingTime]).
+  final Duration read;
   final int id;
+
+  /// Lo que dura el desvanecimiento al final.
+  static const fade = Duration(milliseconds: 1500);
+
+  DateTime get fadeStart => at.add(read);
+  DateTime get gone => fadeStart.add(fade);
+
+  /// 1 mientras se lee; baja a 0 durante [fade].
+  double opacityAt(DateTime now) {
+    final past = now.difference(fadeStart).inMilliseconds;
+    if (past <= 0) return 1;
+    return (1 - past / fade.inMilliseconds).clamp(0.0, 1.0);
+  }
 }
 
 class PetController extends ChangeNotifier {
@@ -109,9 +147,10 @@ class PetController extends ChangeNotifier {
   bool chatOpen = false;
   bool _openAfterWake = false;
 
-  /// Burbujas de Laika (las más recientes al final). Máximo [maxBubbles].
+  /// Burbujas de Laika (las más recientes al final). Se van solas cuando
+  /// pasa su tiempo de lectura; [maxBubbles] es solo un tope de seguridad.
   final List<Bubble> bubbles = [];
-  static const maxBubbles = 4;
+  static const maxBubbles = 8;
 
   /// Tu último mensaje (se muestra discreto junto a la caja de texto).
   String? lastMine;
@@ -130,6 +169,13 @@ class PetController extends ChangeNotifier {
   /// Algo que Laika acaba de guardar en su memoria (aviso breve).
   MemoryNode? justLearned;
 
+  /// Día (aaaa-mm-dd) en que ya mostró algo guardado para recordártelo: como
+  /// mucho uno al día.
+  String? _resurfacedOn;
+
+  /// Cosas guardadas que ya vio (para comer solo con lo nuevo).
+  final Set<int> _seenItems = {};
+
   Mood? _reaction;
   Timer? _reactionTimer;
 
@@ -141,8 +187,11 @@ class PetController extends ChangeNotifier {
         PetState.awake => _reaction ?? (typing ? Mood.thinking : Mood.neutral),
       };
 
+  /// Lo que dura una reacción (y el saludo al despertar).
+  static const greetingTime = Duration(milliseconds: 3500);
+
   /// Pone una cara unos segundos (luego vuelve a la normal).
-  void react(Mood m, [Duration d = const Duration(milliseconds: 3500)]) {
+  void react(Mood m, [Duration d = greetingTime]) {
     if (!isAwake) return;
     _reaction = m;
     _reactionTimer?.cancel();
@@ -155,6 +204,8 @@ class PetController extends ChangeNotifier {
 
   late final StreamSubscription<LaikaEvent> _sub;
   Timer? _idleTimer;
+  Timer? _bubbleTimer;
+  Timer? _resurfaceTimer;
   Timer? _deepTimer;
   Timer? _flashTimer;
   bool _checking = false;
@@ -192,16 +243,24 @@ class PetController extends ChangeNotifier {
     _notify();
   }
 
-  /// Cualquier interacción: reinicia la cuenta de 15 s.
+  /// Cualquier interacción: reinicia la cuenta de 15 s. Si todavía hay
+  /// burbujas por leer, los 15 s cuentan desde que se desvanece la última.
   void touch() {
     if (!isAwake) return;
     _idleTimer?.cancel();
-    _idleTimer = Timer(idle, _onIdle);
+    var wait = idle;
+    if (bubbles.isNotEmpty) {
+      final last = bubbles.map((b) => b.gone).reduce((a, b) => a.isAfter(b) ? a : b);
+      final untilGone = last.difference(clock.now());
+      if (untilGone > Duration.zero) wait = untilGone + idle;
+    }
+    _idleTimer = Timer(wait, _onIdle);
   }
 
   void _onIdle() {
-    // No se duerme a media respuesta.
-    if (_state == PetState.thinking || typing) {
+    // No se duerme a media respuesta ni con mensajes por leer.
+    final now = clock.now();
+    if (_state == PetState.thinking || typing || bubbles.any((b) => b.gone.isAfter(now))) {
       touch();
       return;
     }
@@ -221,6 +280,8 @@ class PetController extends ChangeNotifier {
       _notify();
     });
     bubbles.clear();
+    _bubbleTimer?.cancel();
+    _resurfaceTimer?.cancel();
     lastMine = null;
     typing = false;
     _reaction = null;
@@ -253,6 +314,7 @@ class PetController extends ChangeNotifier {
       pendingReminders.clear();
       touch();
       react(Mood.greeting);
+      _resurface();
     } else {
       _state = PetState.asleep;
       wakeFailed = true;
@@ -260,6 +322,33 @@ class PetController extends ChangeNotifier {
     }
     _openAfterWake = false;
     _notify();
+  }
+
+  /// Al despertar, UNA petición a /api/resurface: si hay algo guardado que
+  /// conviene recordarte, lo dice con cara de impresionada (máx. 1 al día).
+  /// Si falla (servidor viejo, sin la ruta), no pasa nada.
+  Future<void> _resurface() async {
+    final start = clock.now();
+    final today = start.toIso8601String().substring(0, 10);
+    if (_resurfacedOn == today) return;
+    List<Item> items;
+    try {
+      items = await api.resurface().timeout(healthTimeout);
+    } catch (_) {
+      return;
+    }
+    if (items.isEmpty || _disposed) return;
+    // Primero termina de saludar.
+    final left = start.add(greetingTime).difference(clock.now());
+    _resurfaceTimer?.cancel();
+    _resurfaceTimer = Timer(left.isNegative ? Duration.zero : left, () {
+      if (_disposed || !isAwake) return;
+      _resurfacedOn = today;
+      _addBubble(resurfaceText(items.first, clock.now()));
+      react(Mood.impressed, const Duration(seconds: 5));
+      touch();
+      _notify();
+    });
   }
 
   bool _composing = false;
@@ -317,6 +406,16 @@ class PetController extends ChangeNotifier {
         justLearned = node;
         _flash(() => justLearned = null, const Duration(seconds: 4));
         react(Mood.impressed);
+      case LibraryEvent(:final text):
+        if (isAwake) {
+          _addBubble(text);
+          react(e.failed ? Mood.ashamed : Mood.eating, const Duration(seconds: 4));
+        }
+      case ItemEvent(:final item):
+        // Algo nuevo para su segundo cerebro (PDF, link, video…): se lo come.
+        final fresh = _seenItems.add(item.id) &&
+            clock.now().difference(item.createdAt ?? clock.now()) < const Duration(minutes: 2);
+        if (fresh) react(Mood.eating, const Duration(seconds: 4));
     }
     touch();
     _notify();
@@ -327,7 +426,25 @@ class PetController extends ChangeNotifier {
     while (bubbles.length > maxBubbles) {
       bubbles.removeAt(0);
     }
+    _scheduleFade();
   }
+
+  /// Quita las burbujas que ya se desvanecieron y programa la siguiente.
+  void _scheduleFade() {
+    _bubbleTimer?.cancel();
+    if (bubbles.isEmpty) return;
+    final next = bubbles.map((b) => b.gone).reduce((a, b) => a.isBefore(b) ? a : b);
+    final wait = next.difference(clock.now());
+    _bubbleTimer = Timer(wait.isNegative ? Duration.zero : wait, () {
+      final now = clock.now();
+      bubbles.removeWhere((b) => !b.gone.isAfter(now));
+      _scheduleFade();
+      _notify();
+    });
+  }
+
+  /// Para dibujar: la hora según el mismo reloj que usan las burbujas.
+  DateTime now() => clock.now();
 
   void _flash(VoidCallback clear, [Duration d = const Duration(seconds: 3)]) {
     _flashTimer?.cancel();
@@ -348,7 +465,22 @@ class PetController extends ChangeNotifier {
     _deepTimer?.cancel();
     _flashTimer?.cancel();
     _reactionTimer?.cancel();
+    _bubbleTimer?.cancel();
+    _resurfaceTimer?.cancel();
     _sub.cancel();
     super.dispose();
   }
+}
+
+/// Lo que dice Laika al recordarte algo guardado.
+String resurfaceText(Item item, DateTime now) {
+  final days = now.difference(item.createdAt ?? now).inDays;
+  final when = switch (days) {
+    <= 0 => 'Hoy',
+    1 => 'Ayer',
+    _ => 'Hace $days días',
+  };
+  final what = item.title.isNotEmpty ? item.title : item.text;
+  final ask = item.kind == 'for_later' ? '¿Le damos una vuelta hoy?' : '¿Sigue en pie?';
+  return '💡 $when guardaste: «$what». $ask';
 }
