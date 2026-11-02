@@ -105,10 +105,10 @@ class HttpLaika implements LaikaApi {
   @override
   Future<ItemPage> items({String? kind, String? area, String? tag, String? status, String? q, int? before, int limit = 30}) async {
     final j = await _request('GET', '/api/items', query: {
-      if (kind != null) 'kind': kind,
-      if (area != null) 'area': area,
-      if (tag != null) 'tag': tag,
-      if (status != null) 'status': status,
+      'kind': ?kind,
+      'area': ?area,
+      'tag': ?tag,
+      'status': ?status,
       if (q != null && q.isNotEmpty) 'q': q,
       if (before != null) 'before': '$before',
       'limit': '$limit',
@@ -124,11 +124,11 @@ class HttpLaika implements LaikaApi {
   Future<(Item, bool)> createItem({String? text, String? url, String? kind, List<String>? areas, List<String>? tags, String? note}) async {
     final j = await _request('POST', '/api/items',
         body: {
-          if (url != null) 'url': url,
-          if (text != null) 'text': text,
-          if (kind != null) 'kind': kind,
-          if (areas != null) 'areas': areas,
-          if (tags != null) 'tags': tags,
+          'url': ?url,
+          'text': ?text,
+          'kind': ?kind,
+          'areas': ?areas,
+          'tags': ?tags,
           if (note != null && note.isNotEmpty) 'note': note,
         },
         timeout: const Duration(seconds: 60)) as Map<String, dynamic>; // sin kind, Laika lo clasifica (una llamada al modelo)
@@ -242,7 +242,7 @@ class HttpLaika implements LaikaApi {
 
   @override
   Future<MemoryEdge> createEdge(String source, String target, {String? label}) async {
-    final j = await _request('POST', '/api/edges', body: {'source': source, 'target': target, if (label != null) 'label': label})
+    final j = await _request('POST', '/api/edges', body: {'source': source, 'target': target, 'label': ?label})
         as Map<String, dynamic>;
     return MemoryEdge.fromJson(j['edge'] as Map<String, dynamic>);
   }

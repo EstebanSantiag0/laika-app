@@ -6,22 +6,32 @@
 //  • Cerebro: la esfera 3D de Cosmos, en versión clara.
 //  • Notas y recordatorios: estilo Brutal (bordes gruesos, sombras duras),
 //    con los colores de Cristal.
-//  • Mascota: cara-círculo estilo Brutal con 15 emociones (lib/pets/circle_face.dart)
+//  • Segundo cerebro: Guardados, Gustos y editar el grafo (laika_saved.dart, laika_edit.dart).
+//  • Mascota: cara-círculo estilo Brutal con 16 emociones (lib/pets/circle_face.dart)
 //    o una skin de imágenes elegida en Ajustes (lib/pets/skins.dart).
 
+import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 
+import 'package:file_selector/file_selector.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../core/api.dart';
 import '../core/brain.dart';
 import '../core/models.dart';
 import '../core/pet.dart';
+import '../core/second_brain.dart';
 import '../core/session.dart';
 import '../core/sphere_view.dart';
 import '../core/stage.dart';
 import '../core/widgets.dart';
 import '../core/config.dart';
 import '../pets/skins.dart';
+
+part 'laika_saved.dart';
+part 'laika_edit.dart';
 
 // ── Paleta Cristal ──────────────────────────────────────────────────────────
 const lInk = Color(0xFF3B3355);
@@ -52,7 +62,7 @@ BoxDecoration brutalBox(Color fill, {double shadow = 5, double border = 2.5}) =>
 final laikaSpec = VariantSpec(
   id: 'laika',
   name: 'Laika (mezcla elegida)',
-  tagline: 'Paleta Cristal, mensajes Pixel, cerebro-esfera de Cosmos y notas Brutal. cara con 15 emociones y skins propias.',
+  tagline: 'Paleta Cristal, mensajes Pixel, cerebro-esfera de Cosmos y notas Brutal. cara con 16 emociones, segundo cerebro y skins propias.',
   swatch: const [lLavender, lPink, lMint, lAccent],
   build: (s) => LaikaApp(session: s),
 );
@@ -261,6 +271,8 @@ class _LaikaAppState extends State<LaikaApp> {
                     onOpenApp: () => setState(() => tab = 1)),
               )),
         ('Cerebro', () => LaikaBrain(brain: widget.session.brain)),
+        ('Guardados', () => LaikaSaved(saved: widget.session.saved, areas: widget.session.brain.graph?.areas ?? const [])),
+        ('Gustos', () => LaikaLikes(saved: widget.session.saved)),
         ('Agenda', () => LaikaAgenda(rem: widget.session.reminders)),
         ('Emociones', () => const MoodSheet()),
         ('Ajustes', () => const LaikaSettings()),
@@ -366,6 +378,11 @@ class _LaikaBrainState extends State<LaikaBrain> {
                   Text('Cerebro', style: _t(26, w: FontWeight.w800)),
                   const Spacer(),
                   IconButton(
+                    tooltip: 'Papelera',
+                    onPressed: () => showTrash(context, b),
+                    icon: const Icon(Icons.delete_outline_rounded, color: lInk),
+                  ),
+                  IconButton(
                     tooltip: _sphere.spinning ? 'Pausar giro' : 'Girar',
                     onPressed: _sphere.toggleSpin,
                     icon: Icon(_sphere.spinning ? Icons.pause_rounded : Icons.play_arrow_rounded, color: lInk),
@@ -389,6 +406,8 @@ class _LaikaBrainState extends State<LaikaBrain> {
                 const SizedBox(height: 16),
                 if (sel != null) ...[
                   NoteCard(brain: b, node: sel, graph: g),
+                  const SizedBox(height: 12),
+                  NodeActions(brain: b, node: sel),
                   const SizedBox(height: 18),
                 ],
                 BrainFilters(

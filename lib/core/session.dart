@@ -208,9 +208,26 @@ class _SimPanelState extends State<SimPanel> {
 /// "Dato · Etapa actual · Estudios"
 String describeNode(MemoryNode n, MemoryGraph g) {
   final areas = n.areas.map((a) => g.areaById[a]?.name ?? a).join(', ');
-  final scope = n.kind == NodeKind.entity ? null : n.timeScope.label;
-  return [n.kind.label, ?scope, if (areas.isNotEmpty) areas].join(' · ');
+  final scope = switch (n.kind) {
+    NodeKind.entity || NodeKind.tag || NodeKind.area => null,
+    NodeKind.item => itemKindLabels[n.itemKind],
+    _ => n.timeScope.label,
+  };
+  final kind = n.kind == NodeKind.item ? _formatLabel[n.subkind] ?? 'Guardado' : n.kind.label;
+  final pol = switch (n.polarity) { 'like' => 'le gusta', 'dislike' => 'no le gusta', _ => null };
+  final count = n.kind == NodeKind.tag && n.count != null ? '${n.count} cosas' : null;
+  return [kind, ?scope, ?pol, ?count, if (areas.isNotEmpty) areas, if (n.tags.isNotEmpty) n.tags.map((t) => '#$t').join(' ')]
+      .join(' · ');
 }
+
+const _formatLabel = {
+  'text': 'Nota',
+  'link': 'Link',
+  'video': 'Video',
+  'pdf': 'PDF',
+  'book': 'Libro',
+  'image': 'Imagen',
+};
 
 /// Fechas relevantes de un nodo en texto.
 String nodeDates(MemoryNode n) {
