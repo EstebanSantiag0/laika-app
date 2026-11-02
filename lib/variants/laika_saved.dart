@@ -168,7 +168,7 @@ class _LaikaSavedState extends State<LaikaSaved> {
             for (final k in Item.kinds)
               _chip(itemKindLabels[k]!, _kindColor[k]!, _captureKind == k, () => setState(() => _captureKind = k)),
             const SizedBox(width: 12),
-            _action(_busy ? 'Guardando…' : 'Guardar', lAccent.withValues(alpha: 0.35), _busy ? null : _save, icon: Icons.add_rounded),
+            _action(_busy ? 'Guardando…' : 'Guardar', lLavender, _busy ? null : _save, icon: Icons.add_rounded),
             _action('Subir archivo', lPeach, _busy ? null : _upload, icon: Icons.attach_file_rounded),
           ]),
         ]),

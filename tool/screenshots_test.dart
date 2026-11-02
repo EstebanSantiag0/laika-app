@@ -99,6 +99,45 @@ void main() {
     });
   }
 
+  testWidgets('capturas: segundo cerebro (Guardados, Gustos, editar)', (tester) async {
+    tester.view.physicalSize = const Size(1280, 860);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(LaikaPrototypes(initial: 'laika'));
+    await tester.pump();
+    final s = tester.widget<SessionScope>(find.byType(SessionScope)).session;
+    Future<void> settle() async {
+      for (var i = 0; i < 4; i++) {
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+    }
+
+    await tester.tap(find.text('Guardados').first);
+    await settle();
+    await expectLater(find.byType(VariantHost), matchesGoldenFile('../docs/screenshots/laika-5-guardados.png'));
+
+    await tester.tap(find.text('Manual del sensor de humedad.pdf').first);
+    await settle();
+    await expectLater(find.byType(VariantHost), matchesGoldenFile('../docs/screenshots/laika-6-guardado-detalle.png'));
+    await tester.tap(find.byIcon(Icons.close_rounded).first);
+    await settle();
+
+    await tester.tap(find.text('Gustos').first);
+    await settle();
+    await expectLater(find.byType(VariantHost), matchesGoldenFile('../docs/screenshots/laika-7-gustos.png'));
+
+    await tester.tap(find.text('Cerebro').first);
+    await settle();
+    s.brain.select('item:3');
+    await settle();
+    await tester.tap(find.text('Editar').first);
+    await settle();
+    await expectLater(find.byType(VariantHost), matchesGoldenFile('../docs/screenshots/laika-8-editar.png'));
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 1));
+  });
+
   testWidgets('capturas: emociones de Laika', (tester) async {
     tester.view.physicalSize = const Size(1280, 1060);
     tester.view.devicePixelRatio = 1;
