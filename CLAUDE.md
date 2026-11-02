@@ -9,6 +9,8 @@ Esteban. El servidor vive en cc-server (`/root/docker/laika`, repo
 - Llama al usuario **Esteban**. Docs y textos de la app en **español**.
 - **Retomar aquí:** `docs/PROGRESS.md`. Actualízalo y haz commit **en cada paso**.
 - Repo público: **nunca** datos reales de Laika (recuerdos, nombres, tailnet). `sample_data.dart` es ficticio.
+- **Nunca subir claves, tokens ni la URL real del servidor** (repo público). Antes de cada push: revisar el diff con
+  `git grep -nIiE "ts\.net|api[_-]?key|secret|token|bearer|sk-"` (solo deben salir ejemplos como `tu-tailnet`).
 - Comportamiento de la mascota = decisiones de Esteban (no cambiarlas sin preguntar):
   dormir 15 s después de que se desvanece su última burbuja (cada una dura 3 s/palabra; chino 2 s/carácter
   + 3 s/palabra); al hover hace UNA petición a `/health` y despierta solo si `ok && llm` (y luego UNA a

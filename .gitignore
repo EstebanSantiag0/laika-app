@@ -49,3 +49,11 @@ app.*.map.json
 
 # Skins personales (imágenes propias; no se suben)
 /skins/
+
+# Secretos: este repo es PÚBLICO. Nunca subir claves, tokens ni la dirección real del servidor.
+.env
+.env.*
+*.key
+*.pem
+secrets*
+config.json
