@@ -23,6 +23,9 @@ class PetOverlay extends StatefulWidget {
 }
 
 class _PetOverlayState extends State<PetOverlay> {
+  /// LAIKA_DEBUG=1: registra clics y zonas en stderr.
+  static final _debug = Platform.environment['LAIKA_DEBUG'] != null;
+
   @override
   void dispose() {
     widget.session.dispose();
@@ -50,20 +53,35 @@ class _PetOverlayState extends State<PetOverlay> {
         scaffoldBackgroundColor: Colors.transparent,
         textSelectionTheme: const TextSelectionThemeData(cursorColor: lAccent),
       ),
-      home: Material(
-        type: MaterialType.transparency,
-        // Si cambias la skin o el tamaño en Ajustes, se actualiza aquí al instante.
-        child: ValueListenableBuilder(
-          valueListenable: config,
-          builder: (context, cfg, _) => PetStage(
-            key: ValueKey(cfg.petSize),
-            controller: widget.session.pet,
-            skin: const LaikaSkin(transparent: true),
-            onOpenApp: _openApp,
-            onRegions: WindowBridge.setInputRegion,
-          ),
-        ),
-      ),
+      home: _debug
+          ? Listener(
+              behavior: HitTestBehavior.translucent,
+              onPointerDown: (e) =>
+                  stderr.writeln('[laika] flutter down ${e.kind.name} at ${e.position.dx.round()},${e.position.dy.round()}'),
+              onPointerUp: (e) => stderr.writeln('[laika] flutter up at ${e.position.dx.round()},${e.position.dy.round()}'),
+              child: _home(),
+            )
+          : _home(),
     );
   }
+
+  Widget _home() => Material(
+    type: MaterialType.transparency,
+    // Si cambias la skin o el tamaño en Ajustes, se actualiza aquí al instante.
+    child: ValueListenableBuilder(
+      valueListenable: config,
+      builder: (context, cfg, _) => PetStage(
+        key: ValueKey(cfg.petSize),
+        controller: widget.session.pet,
+        skin: const LaikaSkin(transparent: true),
+        onOpenApp: _openApp,
+        onRegions: (r) {
+          if (_debug) {
+            stderr.writeln('[laika] flutter regions: ${r.map((x) => '${x.left.round()},${x.top.round()} ${x.width.round()}x${x.height.round()}').join(' | ')}');
+          }
+          WindowBridge.setInputRegion(r);
+        },
+      ),
+    ),
+  );
 }

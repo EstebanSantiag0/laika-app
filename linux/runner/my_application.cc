@@ -30,6 +30,24 @@ static void first_frame_cb(MyApplication* self, FlView* view) {
 // manda esas zonas con "setInputRegion"; el resto de la pantalla sigue
 // funcionando normal debajo.
 
+// LAIKA_DEBUG=1: registra en stderr las zonas que reciben clics y cada clic que
+// llega a la ventana (para depurar el modo mascota).
+static gboolean laika_debug() {
+  static int on = -1;
+  if (on < 0) on = g_getenv("LAIKA_DEBUG") != nullptr;
+  return on;
+}
+
+static void debug_event_handler(GdkEvent* event, gpointer data) {
+  if (event->type == GDK_BUTTON_PRESS || event->type == GDK_BUTTON_RELEASE) {
+    g_printerr("[laika] gdk %s button=%u at %.0f,%.0f\n", event->type == GDK_BUTTON_PRESS ? "press" : "release",
+               event->button.button, event->button.x_root, event->button.y_root);
+  } else if (event->type == GDK_ENTER_NOTIFY) {
+    g_printerr("[laika] gdk enter at %.0f,%.0f\n", event->crossing.x_root, event->crossing.y_root);
+  }
+  gtk_main_do_event(event);
+}
+
 static void set_input_region(GtkWindow* window, FlValue* rects) {
   GdkWindow* gdk_window = gtk_widget_get_window(GTK_WIDGET(window));
   if (gdk_window == nullptr) return;
@@ -46,6 +64,14 @@ static void set_input_region(GtkWindow* window, FlValue* rects) {
       };
       cairo_region_union_rectangle(region, &rect);
     }
+  }
+  if (laika_debug()) {
+    for (int i = 0; i < cairo_region_num_rectangles(region); i++) {
+      cairo_rectangle_int_t r;
+      cairo_region_get_rectangle(region, i, &r);
+      g_printerr("[laika] input region %d: %d,%d %dx%d\n", i, r.x, r.y, r.width, r.height);
+    }
+    if (cairo_region_is_empty(region)) g_printerr("[laika] input region: (vacía)\n");
   }
   gdk_window_input_shape_combine_region(gdk_window, region, 0, 0);
   cairo_region_destroy(region);
@@ -115,6 +141,7 @@ static void my_application_activate(GApplication* application) {
   // if future cases occur).
   gboolean use_header_bar = !self->pet_mode;
   if (self->pet_mode) {
+    if (laika_debug()) gdk_event_handler_set(debug_event_handler, nullptr, nullptr);
     setup_pet_window(window);
     g_signal_connect(window, "realize", G_CALLBACK(pet_window_realized), nullptr);
   }

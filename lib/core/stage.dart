@@ -146,6 +146,9 @@ class _PetStageState extends State<PetStage> with SingleTickerProviderStateMixin
     final skin = widget.skin;
     if (widget.onRegions != null) WidgetsBinding.instance.addPostFrameCallback((_) => _reportRegions());
     return LayoutBuilder(builder: (context, box) {
+      // También al cambiar el tamaño de la ventana (en --pet arranca en 1280×800 y
+      // luego cubre la pantalla): si no, la zona de clics se queda en otro lado.
+      if (widget.onRegions != null) WidgetsBinding.instance.addPostFrameCallback((_) => _reportRegions());
       final w = box.maxWidth, h = box.maxHeight;
       final size = skin.petSize;
       final pos = _clamp(_pos ?? Offset(w - size - 48, h - size - 64), w, h, size);
