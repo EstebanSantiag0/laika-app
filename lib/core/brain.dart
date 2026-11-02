@@ -71,6 +71,70 @@ class BrainController extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Editar el grafo (Esteban: "cada punto se puede editar y borrar, hasta las conexiones") ──
+
+  /// Edita un nodo. Si alguien (Obsidian, Laika) lo cambió después de cargarlo, el
+  /// servidor contesta 409: se recarga y se avisa con [LaikaApiError.conflict].
+  Future<void> edit(MemoryNode node, Map<String, Object?> fields) async {
+    try {
+      await api.patchNode(node.id, fields, baseUpdatedAt: node.updatedAt);
+    } finally {
+      await load();
+    }
+  }
+
+  /// Qué se llevaría a la papelera (sin borrar nada).
+  Future<TrashResult> previewDelete(MemoryNode node, {bool withFacts = false}) =>
+      api.deleteNode(node.id, withFacts: withFacts, dryRun: true);
+
+  Future<TrashResult> delete(MemoryNode node, {bool withFacts = false}) async {
+    final r = await api.deleteNode(node.id, withFacts: withFacts);
+    if (selectedId == node.id) selectedId = null;
+    await load();
+    return r;
+  }
+
+  Future<void> restore(String nodeId) async {
+    await api.restoreNode(nodeId);
+    await load();
+  }
+
+  /// Una conexión tuya entre dos nodos.
+  Future<MemoryEdge> link(String source, String target, {String? label}) async {
+    final e = await api.createEdge(source, target, label: label);
+    await load();
+    return e;
+  }
+
+  Future<void> relabel(MemoryEdge e, String label) async {
+    await api.patchEdge(e.id!, label);
+    await load();
+  }
+
+  /// Borra una conexión tuya, u oculta una de Laika (se puede deshacer desde la papelera).
+  Future<void> unlink(MemoryEdge e) async {
+    await api.deleteEdge(e.id!);
+    await load();
+  }
+
+  Future<void> restoreEdge(String edgeId) async {
+    await api.restoreEdge(edgeId);
+    await load();
+  }
+
+  Future<Trash> trash() => api.trash();
+
+  /// Conexiones de un nodo (con el otro extremo).
+  List<(MemoryEdge, MemoryNode)> edgesOf(MemoryNode n) {
+    final g = graph;
+    if (g == null) return const [];
+    return [
+      for (final e in g.edges)
+        if (e.source == n.id || e.target == n.id)
+          if (g.nodeById[e.source == n.id ? e.target : e.source] case final other?) (e, other),
+    ];
+  }
+
   MemoryNode? get selected => selectedId == null ? null : graph?.nodeById[selectedId];
 
   void select(String? id) {

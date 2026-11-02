@@ -8,6 +8,7 @@ import 'brain.dart';
 import 'mock_backend.dart';
 import 'models.dart';
 import 'pet.dart';
+import 'second_brain.dart';
 
 class LaikaSession {
   /// Sin [api] usa el servidor simulado.
@@ -15,17 +16,20 @@ class LaikaSession {
     pet = PetController(this.api);
     brain = BrainController(this.api);
     reminders = RemindersController(this.api);
+    saved = SecondBrainController(this.api);
   }
 
   final LaikaApi api;
   late final PetController pet;
   late final BrainController brain;
   late final RemindersController reminders;
+  late final SecondBrainController saved;
 
   void dispose() {
     pet.dispose();
     brain.dispose();
     reminders.dispose();
+    saved.dispose();
     api.dispose();
   }
 }
