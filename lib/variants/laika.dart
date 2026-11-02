@@ -230,6 +230,113 @@ class LaikaSkin extends PetSkin {
         ]),
       );
 
+  /// (+) ____________ (🎤): todo dentro de la misma caja oscura. Con texto o
+  /// grabando, el micrófono se vuelve el avioncito de enviar (Esteban).
+  @override
+  Widget composer(BuildContext context, Composer k, {required bool petOnRight}) {
+    final rec = k.recordingFor;
+    return Container(
+      decoration: BoxDecoration(
+        color: lInk,
+        border: Border.all(color: lInk, width: 2),
+        boxShadow: [BoxShadow(color: lAccent.withValues(alpha: 0.3), blurRadius: 14, offset: const Offset(0, 5))],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+      child: Row(children: [
+        _round(Icons.add_rounded, k.onPlus, fill: k.menuOpen ? lLavender : Colors.transparent,
+            color: k.menuOpen ? lInk : lLavender, key: const ValueKey('pet-plus')),
+        const SizedBox(width: 4),
+        Expanded(
+          child: rec != null
+              ? Row(children: [
+                  const Icon(Icons.fiber_manual_record, size: 12, color: Color(0xFFF43F5E)),
+                  const SizedBox(width: 6),
+                  Text(Composer.clock(rec), style: _m(14, color: Colors.white, w: FontWeight.w700)),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text('grabando…', overflow: TextOverflow.ellipsis, style: _m(13, color: lSoft))),
+                  GestureDetector(
+                    key: const ValueKey('pet-cancel-recording'),
+                    onTap: k.onCancelRecording,
+                    child: const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Icon(Icons.close_rounded, size: 18, color: lPink),
+                    ),
+                  ),
+                ])
+              : TextField(
+                  controller: k.text,
+                  focusNode: k.focus,
+                  onSubmitted: (_) => k.onSend(),
+                  style: _m(14.5, color: Colors.white),
+                  cursorColor: lMint,
+                  cursorWidth: 9,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    border: InputBorder.none,
+                    hintText: 'escribe…',
+                    hintStyle: _m(13, color: lSoft),
+                  ),
+                ),
+        ),
+        const SizedBox(width: 4),
+        k.showSend
+            ? _round(Icons.send_rounded, k.onSend, fill: lMint, color: lInk, key: const ValueKey('pet-send'))
+            : _round(Icons.mic_rounded, k.onMic, fill: Colors.transparent, color: lLavender, key: const ValueKey('pet-mic')),
+      ]),
+    );
+  }
+
+  Widget _round(IconData icon, VoidCallback onTap, {required Color fill, required Color color, Key? key}) =>
+      GestureDetector(
+        key: key,
+        onTap: onTap,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(color: fill, shape: BoxShape.circle),
+            child: Icon(icon, size: 19, color: color),
+          ),
+        ),
+      );
+
+  @override
+  Widget chip(BuildContext context, String label, {bool selected = false, VoidCallback? onTap}) => GestureDetector(
+        onTap: onTap,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+            decoration: brutalBox(selected ? lLavender : Colors.white, shadow: 2, border: 1.5),
+            child: Text(label, style: _m(12, w: FontWeight.w700)),
+          ),
+        ),
+      );
+
+  @override
+  Widget menu(BuildContext context, List<MenuEntry> items) => Container(
+        decoration: brutalBox(Colors.white, shadow: 3, border: 2),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          for (final e in items)
+            GestureDetector(
+              onTap: e.onTap,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: Container(
+                  color: Colors.transparent,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                  child: Row(children: [
+                    Icon(e.icon, size: 18, color: lInk),
+                    const SizedBox(width: 10),
+                    Text(e.label, style: _m(13, w: FontWeight.w600)),
+                  ]),
+                ),
+              ),
+            ),
+        ]),
+      );
+
   @override
   Widget? status(BuildContext context, PetController c, double t) {
     final s = statusText(c);

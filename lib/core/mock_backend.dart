@@ -294,7 +294,8 @@ class MockLaika implements LaikaApi {
   }
 
   @override
-  Future<(Item, SaveResult)> uploadItem(String path, {String? kind, List<String>? areas, List<String>? tags, String? note}) async {
+  Future<(Item, SaveResult)> uploadItem(String path,
+      {String? kind, List<String>? areas, List<String>? tags, String? note, bool comment = false}) async {
     await _net();
     final name = path.split('/').last;
     final pdf = name.toLowerCase().endsWith('.pdf');
@@ -313,6 +314,11 @@ class MockLaika implements LaikaApi {
     _items.add(it);
     _events.add(ItemEvent(it));
     _events.add(LibraryEvent('📚 Leyendo «$name»…'));
+    if (comment) {
+      Future<void>.delayed(const Duration(milliseconds: 1200), () {
+        if (!_events.isClosed) _events.add(BubbleEvent('Ñam, «$name». Ya lo vi: si quieres te cuento de qué trata 📚'));
+      });
+    }
     return (it, SaveResult.created);
   }
 
@@ -788,6 +794,37 @@ class MockLaika implements LaikaApi {
 
   @override
   void composing(bool active) {}
+
+  @override
+  void recording(bool active) {}
+
+  /// Ajustes simulados (como GET/PUT /api/settings).
+  final Map<String, dynamic> _settings = {'practice_lang': 'ru', 'corrections': 'on', 'voice_mode': 'mirror', 'pinyin': true};
+
+  @override
+  Future<Map<String, dynamic>> settings() async {
+    await _net();
+    return {..._settings};
+  }
+
+  @override
+  Future<Map<String, dynamic>> updateSettings(Map<String, Object?> changes) async {
+    await _net();
+    final lang = changes['practice_lang'];
+    if (lang != null && !practiceLangs.containsKey(lang)) throw const LaikaApiError(400, 'idioma no válido', field: 'practice_lang');
+    _settings.addAll(changes.cast<String, dynamic>());
+    _events.add(SettingsEvent({..._settings}));
+    return {..._settings};
+  }
+
+  @override
+  Future<void> sendVoice(String path) async {
+    await _net();
+    _events.add(const TypingEvent(true));
+    await Future<void>.delayed(const Duration(milliseconds: 900));
+    _events.add(const BubbleEvent('Te escuché 🎧 ¡Qué bien suena tu pronunciación!'));
+    _events.add(const TypingEvent(false));
+  }
 
   @override
   void dispose() {

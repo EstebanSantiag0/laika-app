@@ -15,6 +15,8 @@
 
 import 'package:flutter/material.dart';
 
+import 'media.dart';
+import 'models.dart';
 import 'pet.dart';
 
 /// Lo que cada variante dibuja a su manera.
@@ -46,10 +48,123 @@ abstract class PetSkin {
 
   /// Etiqueta pequeña sobre Laika: "zZz", "preguntando…", "sin respuesta".
   Widget? status(BuildContext context, PetController c, double t) => null;
+
+  /// La fila para escribirle: (+) ___________ (🎤). Con texto (o grabando), el
+  /// micrófono se vuelve el avioncito de enviar, como en WhatsApp.
+  Widget composer(BuildContext context, Composer k, {required bool petOnRight}) => Row(children: [
+        composerButton(context, Icons.add_rounded, k.onPlus, on: k.menuOpen),
+        const SizedBox(width: 6),
+        Expanded(
+          child: k.recordingFor != null
+              ? recordingBar(context, k.recordingFor!, k.onCancelRecording)
+              : input(context, k.text, k.focus, k.onSend, petOnRight: petOnRight),
+        ),
+        const SizedBox(width: 6),
+        composerButton(context, k.showSend ? Icons.send_rounded : Icons.mic_rounded, k.showSend ? k.onSend : k.onMic,
+            on: k.recordingFor != null),
+      ]);
+
+  Widget composerButton(BuildContext context, IconData icon, VoidCallback? onTap, {bool on = false}) => Material(
+        color: on ? Theme.of(context).colorScheme.primary : Colors.white,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(7),
+            child: Icon(icon, size: 20, color: on ? Colors.white : Colors.black87),
+          ),
+        ),
+      );
+
+  /// En lugar de la caja mientras grabas: "● 0:07  Grabando…  ✕".
+  Widget recordingBar(BuildContext context, Duration d, VoidCallback onCancel) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+        child: Row(children: [
+          const Icon(Icons.fiber_manual_record, size: 12, color: Colors.red),
+          const SizedBox(width: 6),
+          Text(Composer.clock(d)),
+          const SizedBox(width: 8),
+          const Expanded(child: Text('Grabando…', overflow: TextOverflow.ellipsis)),
+          GestureDetector(onTap: onCancel, child: const Icon(Icons.close_rounded, size: 18)),
+        ]),
+      );
+
+  /// Una etiqueta que se puede tocar (el idioma: "RU ▾").
+  Widget chip(BuildContext context, String label, {bool selected = false, VoidCallback? onTap}) => GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: selected ? Theme.of(context).colorScheme.primaryContainer : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(label, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+        ),
+      );
+
+  /// El menú del (+): archivo, captura.
+  Widget menu(BuildContext context, List<MenuEntry> items) => Container(
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          for (final e in items)
+            InkWell(
+              onTap: e.onTap,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Row(children: [Icon(e.icon, size: 18), const SizedBox(width: 10), Text(e.label)]),
+              ),
+            ),
+        ]),
+      );
+}
+
+/// Lo que necesita [PetSkin.composer].
+class Composer {
+  const Composer({
+    required this.text,
+    required this.focus,
+    required this.onSend,
+    required this.onPlus,
+    required this.onMic,
+    required this.onCancelRecording,
+    required this.hasText,
+    required this.menuOpen,
+    this.recordingFor,
+  });
+  final TextEditingController text;
+  final FocusNode focus;
+
+  /// Manda el texto, o la nota de voz si estás grabando.
+  final VoidCallback onSend;
+  final VoidCallback onPlus;
+  final VoidCallback onMic;
+  final VoidCallback onCancelRecording;
+  final bool hasText;
+  final bool menuOpen;
+
+  /// Cuánto llevas grabando (null = no estás grabando).
+  final Duration? recordingFor;
+
+  bool get showSend => hasText || recordingFor != null;
+
+  static String clock(Duration d) => '${d.inMinutes}:${(d.inSeconds % 60).toString().padLeft(2, '0')}';
+}
+
+class MenuEntry {
+  const MenuEntry(this.icon, this.label, this.onTap);
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
 }
 
 class PetStage extends StatefulWidget {
-  const PetStage({super.key, required this.controller, required this.skin, this.onOpenApp, this.onRegions});
+  const PetStage({super.key, required this.controller, required this.skin, this.onOpenApp, this.onRegions, this.media = const Media()});
+
+  /// Micrófono, capturas y selector de archivos (en las pruebas, uno falso).
+  final Media media;
 
   final PetController controller;
   final PetSkin skin;
@@ -80,11 +195,20 @@ class _PetStageState extends State<PetStage> with SingleTickerProviderStateMixin
   final _statusKey = GlobalKey();
   List<Rect> _lastRegions = const [];
 
+  bool _hasText = false;
+  bool _menuOpen = false; // el del (+)
+  bool _langOpen = false;
+  late final VoiceRecorder _rec = widget.media.recorder();
+
   @override
   void initState() {
     super.initState();
     c.addListener(_changed);
-    _text.addListener(() => c.composing(_text.text.trim().isNotEmpty));
+    _text.addListener(() {
+      final has = _text.text.trim().isNotEmpty;
+      c.composing(has);
+      if (has != _hasText) setState(() => _hasText = has);
+    });
     _focus.addListener(() {
       if (!_focus.hasFocus) c.composing(false);
     });
@@ -94,14 +218,14 @@ class _PetStageState extends State<PetStage> with SingleTickerProviderStateMixin
     final cb = widget.onRegions;
     if (cb == null || !mounted) return;
     final rects = <Rect>[];
-    for (final k in [_petKey, _chatKey, _statusKey]) {
+    for (final k in c.hiddenForShot ? const <GlobalKey>[] : [_petKey, _chatKey, _statusKey]) {
       final box = k.currentContext?.findRenderObject();
       if (box is RenderBox && box.hasSize && box.size.width > 1 && box.size.height > 1) {
         rects.add((box.localToGlobal(Offset.zero) & box.size).inflate(4));
       }
     }
     // El chat solo cuenta si está visible.
-    if (!c.isAwake && rects.length > 1) rects.removeAt(1);
+    if (!c.isAwake && !c.hiddenForShot && rects.length > 1) rects.removeAt(1);
     bool same(List<Rect> a, List<Rect> b) {
       if (a.length != b.length) return false;
       for (var i = 0; i < a.length; i++) {
@@ -122,12 +246,14 @@ class _PetStageState extends State<PetStage> with SingleTickerProviderStateMixin
       WidgetsBinding.instance.addPostFrameCallback((_) => _focus.requestFocus());
     }
     _wasOpen = c.chatOpen;
+    if (!c.chatOpen) _menuOpen = _langOpen = false;
     setState(() {});
   }
 
   @override
   void dispose() {
     c.removeListener(_changed);
+    _rec.cancel();
     _anim.dispose();
     _text.dispose();
     _focus.dispose();
@@ -135,10 +261,65 @@ class _PetStageState extends State<PetStage> with SingleTickerProviderStateMixin
   }
 
   void _send() {
+    if (c.recordingVoice) {
+      _sendVoice();
+      return;
+    }
     final t = _text.text;
     _text.clear();
     c.send(t);
     _focus.requestFocus();
+  }
+
+  Future<void> _pickFile() async {
+    setState(() => _menuOpen = false);
+    final path = await widget.media.pickFile();
+    if (path != null) await c.attach(path);
+  }
+
+  /// Laika se esconde, eliges un rectángulo (Spectacle) y se lo da.
+  Future<void> _screenshot() async {
+    setState(() => _menuOpen = false);
+    c.hide(true);
+    await Future<void>.delayed(const Duration(milliseconds: 350)); // que ya no salga en pantalla
+    String? path;
+    try {
+      path = await widget.media.screenshotRegion();
+    } on MediaError catch (e) {
+      c.notice('⚠️ ${e.message}');
+    } finally {
+      c.hide(false);
+    }
+    if (path != null) await c.attach(path, screenshot: true);
+  }
+
+  Future<void> _mic() async {
+    setState(() => _menuOpen = _langOpen = false);
+    if (!widget.media.supported) {
+      c.notice('🎤 Las notas de voz por ahora solo funcionan en Linux.');
+      return;
+    }
+    try {
+      await _rec.start();
+      c.setRecording(true);
+    } on MediaError catch (e) {
+      c.notice('⚠️ ${e.message}');
+    }
+  }
+
+  Future<void> _sendVoice() async {
+    final path = await _rec.stop();
+    c.setRecording(false);
+    if (path == null) {
+      c.notice('🎤 No se oyó nada.');
+    } else {
+      await c.sendVoice(path);
+    }
+  }
+
+  Future<void> _cancelRecording() async {
+    await _rec.cancel();
+    c.setRecording(false);
   }
 
   @override
@@ -146,6 +327,10 @@ class _PetStageState extends State<PetStage> with SingleTickerProviderStateMixin
     final skin = widget.skin;
     if (widget.onRegions != null) WidgetsBinding.instance.addPostFrameCallback((_) => _reportRegions());
     return LayoutBuilder(builder: (context, box) {
+      if (c.hiddenForShot) {
+        if (widget.onRegions != null) WidgetsBinding.instance.addPostFrameCallback((_) => _reportRegions());
+        return const SizedBox.expand();
+      }
       // También al cambiar el tamaño de la ventana (en --pet arranca en 1280×800 y
       // luego cubre la pantalla): si no, la zona de clics se queda en otro lado.
       if (widget.onRegions != null) WidgetsBinding.instance.addPostFrameCallback((_) => _reportRegions());
@@ -203,7 +388,55 @@ class _PetStageState extends State<PetStage> with SingleTickerProviderStateMixin
                           child: skin.mine(context, c.lastMine!, petOnRight: petOnRight),
                         ),
                       // Un clic sobre Laika abre la caja; si no, solo se ven sus mensajes.
-                      if (c.chatOpen) skin.input(context, _text, _focus, _send, petOnRight: petOnRight),
+                      if (c.chatOpen) ...[
+                        if (_langOpen)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Wrap(spacing: 6, runSpacing: 6, children: [
+                              for (final e in practiceLangs.entries)
+                                skin.chip(context, e.value, selected: e.key == c.lang, onTap: () {
+                                  setState(() => _langOpen = false);
+                                  c.setLang(e.key);
+                                }),
+                            ]),
+                          ),
+                        if (_menuOpen)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: skin.menu(context, [
+                              MenuEntry(Icons.description_outlined, 'Archivo', _pickFile),
+                              MenuEntry(Icons.screenshot_monitor_outlined, 'Captura de pantalla', _screenshot),
+                            ]),
+                          ),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: skin.chip(context, '${(c.lang ?? '··').toUpperCase()} ▾', selected: _langOpen,
+                              onTap: () => setState(() {
+                                    _langOpen = !_langOpen;
+                                    _menuOpen = false;
+                                    c.touch();
+                                  })),
+                        ),
+                        skin.composer(
+                          context,
+                          Composer(
+                            text: _text,
+                            focus: _focus,
+                            onSend: _send,
+                            onPlus: () => setState(() {
+                              _menuOpen = !_menuOpen;
+                              _langOpen = false;
+                              c.touch();
+                            }),
+                            onMic: _mic,
+                            onCancelRecording: _cancelRecording,
+                            hasText: _hasText,
+                            menuOpen: _menuOpen,
+                            recordingFor: c.recordingSince == null ? null : now.difference(c.recordingSince!),
+                          ),
+                          petOnRight: petOnRight,
+                        ),
+                      ],
                     ],
                   );
                 },

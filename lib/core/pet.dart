@@ -234,6 +234,122 @@ class PetController extends ChangeNotifier {
   void openChat() {
     if (!isAwake) return;
     chatOpen = true;
+    if (!_langLoaded) _loadLang();
+    touch();
+    _notify();
+  }
+
+  // ── Idioma, voz, archivos y capturas (desde la caja de la mascota) ───────
+
+  /// Idioma que practicas con Laika (`en`, `ru`, `zh`); null hasta que se sabe.
+  String? lang;
+  bool _langLoaded = false;
+
+  /// UNA petición a /api/settings la primera vez que abres la caja tras despertar.
+  Future<void> _loadLang() async {
+    _langLoaded = true;
+    try {
+      lang = (await api.settings())['practice_lang'] as String?;
+    } catch (_) {
+      _langLoaded = false; // se reintenta la próxima vez que abras la caja
+    }
+    _notify();
+  }
+
+  Future<void> setLang(String code) async {
+    if (code == lang) return;
+    final before = lang;
+    lang = code; // se ve al instante; si el servidor dice que no, se regresa
+    touch();
+    _notify();
+    try {
+      lang = (await api.updateSettings({'practice_lang': code}))['practice_lang'] as String? ?? code;
+    } catch (_) {
+      lang = before;
+      _addBubble('⚠️ No pude cambiar el idioma.');
+      react(Mood.ashamed);
+    }
+    _notify();
+  }
+
+  /// Estás grabando una nota de voz (no se duerme y Laika no contesta mientras).
+  bool recordingVoice = false;
+  DateTime? recordingSince;
+  Timer? _recordingTimer;
+
+  void setRecording(bool on) {
+    if (on == recordingVoice) return;
+    recordingVoice = on;
+    recordingSince = on ? clock.now() : null;
+    _recordingTimer?.cancel();
+    api.recording(on);
+    if (on) _recordingTimer = Timer.periodic(const Duration(seconds: 2), (_) => api.recording(true));
+    touch();
+    _notify();
+  }
+
+  /// Tu nota de voz ya grabada: se transcribe en el servidor y entra al chat.
+  Future<void> sendVoice(String path) => _turn('🎤 Nota de voz', () => api.sendVoice(path));
+
+  /// Un archivo o una captura: va a su biblioteca (Guardados) y Laika lo comenta.
+  Future<void> attach(String path, {bool screenshot = false}) async {
+    final name = path.split('/').last;
+    await _turn(screenshot ? '🖼️ Captura de pantalla' : '📎 $name', () async {
+      final (item, how) = await api.uploadItem(path, comment: true);
+      _seenItems.add(item.id);
+      switch (how) {
+        case SaveResult.created:
+          react(Mood.eating, const Duration(seconds: 4));
+        case SaveResult.duplicate:
+          _addBubble('Eso ya lo tenía: «${item.displayTitle}» 📚');
+        case SaveResult.restored:
+          _addBubble('Estaba en la papelera: «${item.displayTitle}» volvió 📚');
+      }
+    }, sleepOnFail: false);
+  }
+
+  /// Un aviso suyo en una burbuja (p. ej. "no pude grabar").
+  void notice(String text) {
+    if (!isAwake) return;
+    _addBubble(text);
+    touch();
+    _notify();
+  }
+
+  /// Mientras sacas una captura, Laika y su chat se esconden (no salen en la foto).
+  bool hiddenForShot = false;
+
+  void hide(bool on) {
+    hiddenForShot = on;
+    touch();
+    _notify();
+  }
+
+  /// Un turno tuyo que no es texto (voz, archivo): se ve como tu mensaje y ella piensa.
+  Future<void> _turn(String mine, Future<void> Function() job, {bool sleepOnFail = true}) async {
+    if (!isAwake) return;
+    lastMine = mine;
+    _state = PetState.thinking;
+    touch();
+    _notify();
+    try {
+      await job();
+      if (_state == PetState.thinking) _state = PetState.awake;
+    } on LaikaApiError catch (e) {
+      _state = PetState.awake;
+      _addBubble('⚠️ ${e.maxMb != null ? 'Es muy grande (máx. ${e.maxMb} MB).' : e.message}');
+      react(Mood.ashamed);
+    } catch (_) {
+      if (sleepOnFail) {
+        sleep();
+        wakeFailed = true;
+        _flash(() => wakeFailed = false);
+      } else {
+        _state = PetState.awake;
+        _addBubble('⚠️ No pude mandarlo: el servidor no responde.');
+        react(Mood.ashamed);
+      }
+    }
     touch();
     _notify();
   }
@@ -261,7 +377,8 @@ class PetController extends ChangeNotifier {
     // No se duerme a media respuesta ni con mensajes por leer.
     final now = clock.now();
     // Ni mientras le escribes (hay texto sin mandar en la caja).
-    if (_state == PetState.thinking || typing || _composing || bubbles.any((b) => b.gone.isAfter(now))) {
+    if (_state == PetState.thinking || typing || _composing || recordingVoice || hiddenForShot ||
+        bubbles.any((b) => b.gone.isAfter(now))) {
       touch();
       return;
     }
@@ -274,6 +391,7 @@ class PetController extends ChangeNotifier {
     _state = PetState.asleep;
     sleepPose = SleepPose.seated;
     chatOpen = false;
+    _langLoaded = false;
     // Otros 15 s sin interacción: se acuesta.
     _deepTimer = Timer(idle, () {
       if (_state != PetState.asleep) return;
@@ -308,7 +426,10 @@ class PetController extends ChangeNotifier {
     if (ok) {
       _deepTimer?.cancel();
       _state = PetState.awake;
-      if (_openAfterWake) chatOpen = true;
+      if (_openAfterWake) {
+        chatOpen = true;
+        if (!_langLoaded) _loadLang();
+      }
       for (final r in pendingReminders) {
         _addBubble('⏰ Recordatorio: ${r.text}');
       }
@@ -413,6 +534,8 @@ class PetController extends ChangeNotifier {
           _addBubble(text);
           react(e.failed ? Mood.ashamed : Mood.eating, const Duration(seconds: 4));
         }
+      case SettingsEvent(:final practiceLang):
+        if (practiceLang != null) lang = practiceLang;
       case ItemEvent(:final item):
         // Algo nuevo para su segundo cerebro (PDF, link, video…): se lo come.
         final fresh = _seenItems.add(item.id) &&
@@ -466,6 +589,7 @@ class PetController extends ChangeNotifier {
     _idleTimer?.cancel();
     _deepTimer?.cancel();
     _flashTimer?.cancel();
+    _recordingTimer?.cancel();
     _reactionTimer?.cancel();
     _bubbleTimer?.cancel();
     _resurfaceTimer?.cancel();

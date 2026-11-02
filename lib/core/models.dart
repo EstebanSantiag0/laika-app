@@ -481,6 +481,17 @@ class LibraryEvent extends LaikaEvent {
   bool get failed => RegExp(r"couldn't|can't|no pude", caseSensitive: false).hasMatch(text);
 }
 
+/// Cambiaron los ajustes de Laika (otro dispositivo cambió el idioma, etc.):
+/// {"type":"settings","settings":{...}}.
+class SettingsEvent extends LaikaEvent {
+  const SettingsEvent(this.settings);
+  final Map<String, dynamic> settings;
+  String? get practiceLang => settings['practice_lang'] as String?;
+}
+
+/// Los idiomas que Laika te ayuda a practicar (`practice_lang` en /api/settings).
+const practiceLangs = {'en': 'English', 'ru': 'Русский', 'zh': '中文'};
+
 /// Cambió algo guardado en su segundo cerebro: {"type":"item","item":{...}}.
 class ItemEvent extends LaikaEvent {
   const ItemEvent(this.item);

@@ -44,7 +44,9 @@ abstract class LaikaApi {
   Future<(Item, SaveResult)> createItem({String? text, String? url, String? kind, List<String>? areas, List<String>? tags, String? note});
 
   /// POST /api/items multipart (un archivo: PDF, libro, imagen…).
-  Future<(Item, SaveResult)> uploadItem(String path, {String? kind, List<String>? areas, List<String>? tags, String? note});
+  ///
+  /// [comment]: además, Laika lo comenta en el chat (lo que se manda desde la mascota).
+  Future<(Item, SaveResult)> uploadItem(String path, {String? kind, List<String>? areas, List<String>? tags, String? note, bool comment = false});
 
   /// PATCH /api/items/{id}: kind/areas/tags/note/title/status.
   Future<Item> patchItem(int id, Map<String, Object?> fields);
@@ -98,6 +100,19 @@ abstract class LaikaApi {
 
   /// GET /api/trash
   Future<Trash> trash();
+
+  /// GET /api/settings: idioma de práctica (`practice_lang`), correcciones, voz…
+  Future<Map<String, dynamic>> settings();
+
+  /// PUT /api/settings (parcial). Devuelve los ajustes completos.
+  Future<Map<String, dynamic>> updateSettings(Map<String, Object?> changes);
+
+  /// POST /api/voice: una nota de voz (se transcribe y entra al chat como si la
+  /// hubieras escrito). Las respuestas llegan por [events].
+  Future<void> sendVoice(String path);
+
+  /// Estás grabando una nota de voz ({"type":"typing","recording":true} cada ~2 s).
+  void recording(bool active);
 
   /// Avisa si estás escribiendo en la caja de texto. Laika no contesta
   /// mientras estás escribiendo ({"type":"typing","active":…}).

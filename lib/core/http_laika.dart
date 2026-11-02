@@ -140,38 +140,73 @@ class HttpLaika implements LaikaApi {
   }
 
   @override
-  Future<(Item, SaveResult)> uploadItem(String path, {String? kind, List<String>? areas, List<String>? tags, String? note}) async {
+  Future<(Item, SaveResult)> uploadItem(String path,
+      {String? kind, List<String>? areas, List<String>? tags, String? note, bool comment = false}) async {
+    final j = await _multipart('/api/items', path, {
+      'kind': ?kind,
+      if (areas != null && areas.isNotEmpty) 'areas': areas.join(','),
+      if (tags != null && tags.isNotEmpty) 'tags': tags.join(','),
+      if (note != null && note.isNotEmpty) 'note': note,
+      if (comment) 'comment': 'true',
+    }) as Map<String, dynamic>;
+    return (_item(j), _saved(j));
+  }
+
+  /// POST multipart con un archivo (campo `file`), mandado en partes: un PDF de
+  /// 100 MB no se carga entero en memoria.
+  Future<Object?> _multipart(String route, String path, Map<String, String> fields,
+      {Duration timeout = const Duration(minutes: 10)}) async {
     final file = File(path);
     final name = path.split(Platform.pathSeparator).last;
     final boundary = 'laika-${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}';
-    String field(String k, String v) => '--$boundary\r\nContent-Disposition: form-data; name="$k"\r\n\r\n$v\r\n';
-    final head = StringBuffer()
-      ..write(kind != null ? field('kind', kind) : '')
-      ..write(areas != null && areas.isNotEmpty ? field('areas', areas.join(',')) : '')
-      ..write(tags != null && tags.isNotEmpty ? field('tags', tags.join(',')) : '')
-      ..write(note != null && note.isNotEmpty ? field('note', note) : '')
-      ..write('--$boundary\r\nContent-Disposition: form-data; name="file"; filename="${name.replaceAll('"', '')}"\r\n'
-          'Content-Type: application/octet-stream\r\n\r\n');
+    final head = StringBuffer();
+    fields.forEach((k, v) => head.write('--$boundary\r\nContent-Disposition: form-data; name="$k"\r\n\r\n$v\r\n'));
+    head.write('--$boundary\r\nContent-Disposition: form-data; name="file"; filename="${name.replaceAll('"', '')}"\r\n'
+        'Content-Type: application/octet-stream\r\n\r\n');
     final headBytes = utf8.encode(head.toString());
     final tail = utf8.encode('\r\n--$boundary--\r\n');
     final HttpClientResponse res;
     final String text;
     try {
-      final req = await _http.postUrl(base.replace(path: '${base.path}/api/items')).timeout(const Duration(seconds: 8));
+      final req = await _http.postUrl(base.replace(path: '${base.path}$route')).timeout(const Duration(seconds: 8));
       req.headers.set(HttpHeaders.acceptHeader, 'application/json');
       req.headers.set(HttpHeaders.contentTypeHeader, 'multipart/form-data; boundary=$boundary');
       req.contentLength = headBytes.length + await file.length() + tail.length;
       req.add(headBytes);
-      await req.addStream(file.openRead()); // en partes: un PDF de 100 MB no se carga entero en memoria
+      await req.addStream(file.openRead());
       req.add(tail);
-      res = await req.close().timeout(const Duration(minutes: 10));
+      res = await req.close().timeout(timeout);
       text = await res.transform(utf8.decoder).join();
     } catch (e) {
       throw LaikaOffline('No se pudo subir el archivo ($e)');
     }
     _check(res.statusCode, text);
-    final j = jsonDecode(text) as Map<String, dynamic>;
-    return (_item(j), _saved(j));
+    return text.isEmpty ? null : jsonDecode(text);
+  }
+
+  @override
+  Future<Map<String, dynamic>> settings() async => (await _request('GET', '/api/settings')) as Map<String, dynamic>;
+
+  @override
+  Future<Map<String, dynamic>> updateSettings(Map<String, Object?> changes) async =>
+      (await _request('PUT', '/api/settings', body: changes)) as Map<String, dynamic>;
+
+  @override
+  Future<void> sendVoice(String path) async {
+    await _socket(); // la respuesta llega por el chat en vivo
+    _turn = Completer<void>();
+    await _multipart('/api/voice', path, const {}, timeout: const Duration(minutes: 2));
+    await _turn!.future.timeout(const Duration(minutes: 2), onTimeout: () {});
+  }
+
+  @override
+  void recording(bool active) {
+    final ws = _ws;
+    if (ws == null || ws.readyState != WebSocket.open) {
+      if (active) _socket().ignore();
+      return;
+    }
+    ws.add(jsonEncode({'type': 'typing', 'active': active, 'draft': false, 'recording': active}));
   }
 
   @override
@@ -323,6 +358,9 @@ class HttpLaika implements LaikaApi {
         _events.add(BubbleEvent('⚠️ ${j['text'] ?? 'Laika no pudo contestar.'}'));
         _events.add(const TypingEvent(false));
         _endTurn();
+      case 'settings':
+        final st = j['settings'];
+        if (st is Map<String, dynamic>) _events.add(SettingsEvent(st));
       case 'item':
         final it = j['item'];
         if (it is Map<String, dynamic>) _events.add(ItemEvent(Item.fromJson(it)));
