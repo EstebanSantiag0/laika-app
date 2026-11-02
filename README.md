@@ -125,7 +125,7 @@ flutter run -d <id-del-teléfono>
 Para generar un ejecutable de Linux:
 
 ```bash
-flutter build linux --release
+flutter build linux --release --no-tree-shake-icons
 ./build/linux/x64/release/bundle/laika_app          # galería de diseños
 ./build/linux/x64/release/bundle/laika_app --pet    # Laika sobre tu escritorio
 ./build/linux/x64/release/bundle/laika_app --app    # la app: cerebro, agenda y emociones
@@ -159,7 +159,7 @@ Tailscale (`tailscale serve` pone la identidad), así que no hay contraseñas en
 ### Instalarla para tu usuario
 
 ```bash
-flutter build linux --release
+flutter build linux --release --no-tree-shake-icons
 tool/install_linux.sh                 # programa en ~/.local/share/laika-app + lanzadores en el menú
 tool/install_linux.sh --autostart     # además, la mascota arranca al iniciar sesión
 tool/install_linux.sh --uninstall     # quitar todo

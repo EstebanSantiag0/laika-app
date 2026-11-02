@@ -4,7 +4,7 @@
 #   ~/.local/share/applications/      lanzadores "Laika" y "Laika (mascota)"
 #   ~/.config/autostart/              solo con --autostart: la mascota al iniciar sesión
 #
-# Uso:  flutter build linux --release && tool/install_linux.sh [--autostart]
+# Uso:  flutter build linux --release --no-tree-shake-icons && tool/install_linux.sh [--autostart]
 # Quitar: tool/install_linux.sh --uninstall
 # Si la mascota se porta mal:  pkill laika_app
 set -euo pipefail
@@ -23,7 +23,7 @@ if [[ "${1:-}" == "--uninstall" ]]; then
 fi
 
 BUNDLE="build/linux/x64/release/bundle"
-[[ -x "$BUNDLE/laika_app" ]] || { echo "Primero: flutter build linux --release" >&2; exit 1; }
+[[ -x "$BUNDLE/laika_app" ]] || { echo "Primero: flutter build linux --release --no-tree-shake-icons" >&2; exit 1; }
 
 mkdir -p "$DEST" "$APPS"
 rm -rf "$DEST.new" && cp -r "$BUNDLE" "$DEST.new" && rm -rf "$DEST" && mv "$DEST.new" "$DEST"

@@ -24,7 +24,7 @@ Esteban. El servidor vive en cc-server (`/root/docker/laika`, repo
 flutter analyze && flutter test
 flutter run -d linux [--dart-define=VARIANT=cosmos|papel|pixel|brutal|cristal]
 flutter test tool/screenshots_test.dart --update-goldens   # regenera docs/screenshots
-flutter build linux --release
+flutter build linux --release --no-tree-shake-icons   # íconos completos: el recorte usaba una copia vieja y faltaban 🎤 y ✈
 build/linux/x64/release/bundle/laika_app --pet   # mascota sobre el escritorio (Wayland); salir: pkill laika_app
 build/linux/x64/release/bundle/laika_app --app   # app en ventana normal
 tool/install_linux.sh [--autostart|--uninstall]   # preguntar a Esteban antes de --autostart
