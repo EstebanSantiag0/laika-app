@@ -110,5 +110,5 @@
   a subir algo que estaba en la papelera ahora lo recupera (`restored: true`) y `base_updated_at` se compara como instante.
 
 ### Siguiente
-- Esteban: dar OK para purgar los items "PRUEBA SB8" (ids 2–18) y sus avisos 📚 del chat (lo hace cc-server).
+- Esteban: dar OK para purgar los items "PRUEBA SB8" (ids 2–20) y sus avisos 📚 del chat (lo hace cc-server).
 - Subido a GitHub (a6cbd46) después de que pasaron todas las pruebas y el diff salió sin secretos.

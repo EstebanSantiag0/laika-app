@@ -75,6 +75,7 @@ void main() {
     idea = i;
     expect(dup, SaveResult.created);
     expect(i.kind, 'idea');
+    expect(i.text, 'PRUEBA SB8 idea $stamp: regar el jardín con un robot', reason: 'tus palabras tal cual; Laika solo agrega título, tipo, áreas y etiquetas');
     expect(i.resurfaceAt, isNotNull, reason: 'las ideas vuelven a los 3 días');
 
     final (l, d1) = await api.createItem(url: 'https://example.com/prueba-sb8-$stamp?utm_source=x');
