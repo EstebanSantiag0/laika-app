@@ -135,3 +135,10 @@
 
 ### Siguiente
 - Esteban: probar en `--pet` el idioma, una nota de voz, un archivo y una captura con el servidor real.
+
+## 2026-11-04 — Laika se queda en el escritorio
+- Esteban: "keep laika in my desktop, even after a reboot".
+- `tool/install_linux.sh --autostart` con el build de 3424eba: programa en `~/.local/share/laika-app/`,
+  lanzadores en `~/.local/share/applications/`, y `~/.config/autostart/laika-pet.desktop` (`--pet` al iniciar sesión).
+- Después de cambiar el código hay que reinstalar: `flutter build linux --release --no-tree-shake-icons && tool/install_linux.sh --autostart`.
+- Quitar el autostart: `rm ~/.config/autostart/laika-pet.desktop` (o `tool/install_linux.sh --uninstall` para todo).
