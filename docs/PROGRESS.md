@@ -155,4 +155,5 @@
   `FLUTTER_ENGINE_SWITCH_1=enable-impeller=false` no tiene efecto en el build release.
 
 ### Siguiente
-- Saber en qué pantalla/acción truena `--app` para reproducirlo (`coredumpctl list laika_app`).
+- Crash de `--app`: Esteban estaba en la **pantalla del gráfico** (mapa de recuerdos), sin hacer nada; no ha vuelto a
+  pasar y pidió dejarlo así. Si regresa: empezar por ahí (`coredumpctl list laika_app`).
