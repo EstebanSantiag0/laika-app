@@ -7,10 +7,11 @@
 //    sigue dormida.
 //  • No hay sondeo en segundo plano: solo se pregunta al servidor cuando tú
 //    la buscas.
-//  • Cada burbuja se queda el tiempo que toma leerla ([readingTime]: 3 s por
-//    palabra; en chino 2 s por carácter + 3 s por palabra en pinyin o
-//    inglés) y luego se desvanece. Laika no se duerme hasta 15 s después de
-//    que se desvaneció la última.
+//  • Cada burbuja se queda el tiempo que toma leerla ([readingTime]: 2 s por
+//    palabra; en chino 2 s por carácter + 2 s por palabra en pinyin o
+//    inglés) y luego se desvanece. Se leen en orden: el tiempo de cada una
+//    empieza a contar cuando se desvaneció la anterior. Laika no se duerme
+//    hasta 15 s después de que se desvaneció la última.
 
 import 'dart:async';
 import 'dart:math';
@@ -84,12 +85,12 @@ final _han = RegExp(r'[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]');
 final _word = RegExp(r"[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*", unicode: true);
 
 /// Cuánto se queda una burbuja antes de desvanecerse (regla de Esteban):
-/// 3 s por palabra; cada carácter chino suma 2 s y cada palabra en pinyin o
-/// inglés dentro de un mensaje en chino, 3 s. Mínimo 3 s (p. ej. solo un emoji).
+/// 2 s por palabra; cada carácter chino suma 2 s y cada palabra en pinyin o
+/// inglés dentro de un mensaje en chino, otros 2 s. Mínimo 2 s (p. ej. solo un emoji).
 Duration readingTime(String text) {
   final chars = _han.allMatches(text).length;
   final words = _word.allMatches(text.replaceAll(_han, ' ')).length;
-  return Duration(seconds: max(3, chars * 2 + words * 3));
+  return Duration(seconds: max(2, (chars + words) * 2));
 }
 
 class Bubble {
@@ -99,7 +100,10 @@ class Bubble {
         id = _n++;
   static int _n = 0;
   final String text;
-  final DateTime at;
+
+  /// Cuándo empieza a contar su tiempo de lectura: al llegar o, si hay otra
+  /// burbuja antes, cuando esa termina de desvanecerse.
+  DateTime at;
 
   /// Tiempo de lectura ([readingTime]).
   final Duration read;
@@ -546,10 +550,24 @@ class PetController extends ChangeNotifier {
     _notify();
   }
 
+  @visibleForTesting
+  void debugAddBubble(String text) => _addBubble(text);
+
   void _addBubble(String text) {
     bubbles.add(Bubble(text));
     while (bubbles.length > maxBubbles) {
       bubbles.removeAt(0);
+    }
+    // En fila: el tiempo de cada una cuenta desde que se desvaneció la anterior.
+    final now = clock.now();
+    for (var i = 0; i < bubbles.length; i++) {
+      final b = bubbles[i];
+      if (i == 0) {
+        if (b.at.isAfter(now)) b.at = now; // la que esperaba se fue por el tope
+      } else if (b.at.isAfter(now) || i == bubbles.length - 1) {
+        final prev = bubbles[i - 1].gone;
+        b.at = prev.isAfter(now) ? prev : now;
+      }
     }
     _scheduleFade();
   }

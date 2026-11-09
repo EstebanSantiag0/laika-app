@@ -174,14 +174,40 @@ void main() {
   });
 
   test('cada burbuja dura su tiempo de lectura', () {
-    expect(readingTime('Muy bien, sigamos con el ruso.'), const Duration(seconds: 18)); // 6 palabras × 3 s
+    expect(readingTime('Muy bien, sigamos con el ruso.'), const Duration(seconds: 12)); // 6 palabras × 2 s
     expect(readingTime('你好'), const Duration(seconds: 4)); // 2 caracteres × 2 s
-    expect(readingTime('我要 kāfēi, please'), const Duration(seconds: 10)); // 2 × 2 s + 2 palabras × 3 s
-    expect(readingTime('🐾'), const Duration(seconds: 3), reason: 'mínimo 3 s');
+    expect(readingTime('我要 kāfēi, please'), const Duration(seconds: 8)); // 2 × 2 s + 2 palabras × 2 s
+    expect(readingTime('🐾'), const Duration(seconds: 2), reason: 'mínimo 2 s');
     final b = Bubble('hola mundo', at: DateTime(2026, 11, 2, 12));
-    expect(b.opacityAt(DateTime(2026, 11, 2, 12, 0, 5)), 1, reason: 'se lee completa 6 s');
+    expect(b.opacityAt(DateTime(2026, 11, 2, 12, 0, 3)), 1, reason: 'se lee completa 4 s');
     expect(b.opacityAt(b.fadeStart.add(const Duration(milliseconds: 750))), closeTo(0.5, 0.01));
     expect(b.opacityAt(b.gone), 0);
+  });
+
+  test('el tiempo de cada burbuja cuenta desde que se desvaneció la anterior (Esteban, 2026-11-09)', () {
+    fakeAsync((fa) {
+      final api = MockLaika()..latency = Duration.zero;
+      final c = PetController(api);
+      c.hover();
+      fa.elapse(const Duration(seconds: 5)); // saludo + el «💡» del simulador
+      c.bubbles.clear();
+      c.debugAddBubble('uno dos tres'); // 6 s + 1.5 s
+      fa.elapse(const Duration(seconds: 1));
+      c.debugAddBubble('cuatro cinco'); // 4 s + 1.5 s, pero después de la primera
+      c.touch();
+      final a = c.bubbles[0], b = c.bubbles[1];
+      expect(b.at, a.gone);
+      fa.elapse(const Duration(seconds: 7)); // t = 8 s: la primera ya se fue
+      expect(c.bubbles.single, b);
+      expect(b.opacityAt(c.now()), 1, reason: 'apenas empezó a contar');
+      fa.elapse(const Duration(seconds: 5)); // t = 13 s = 7.5 + 4 + 1.5
+      expect(c.bubbles, isEmpty);
+      expect(c.isAwake, isTrue);
+      fa.elapse(const Duration(seconds: 16));
+      expect(c.isAwake, isFalse, reason: '15 s después de la última');
+      c.dispose();
+      api.dispose();
+    });
   });
 
   testWidgets('al despertar te recuerda algo guardado, impresionada, y no se duerme mientras lo lees',
@@ -261,7 +287,7 @@ void main() {
       final bubbleText = find.textContaining(c.bubbles.last.text.substring(0, 3), findRichText: true);
       expect(tester.getTopRight(bubbleText.last).dx, lessThan(petLeft));
 
-      // Sigue despierta mientras haya mensajes por leer (3 s por palabra)…
+      // Sigue despierta mientras haya mensajes por leer (2 s por palabra)…
       await mouse.moveTo(const Offset(5, 5));
       for (var i = 0; i < 300 && c.bubbles.isNotEmpty; i++) {
         await tester.pump(const Duration(seconds: 1));

@@ -142,3 +142,17 @@
   lanzadores en `~/.local/share/applications/`, y `~/.config/autostart/laika-pet.desktop` (`--pet` al iniciar sesión).
 - Después de cambiar el código hay que reinstalar: `flutter build linux --release --no-tree-shake-icons && tool/install_linux.sh --autostart`.
 - Quitar el autostart: `rm ~/.config/autostart/laika-pet.desktop` (o `tool/install_linux.sh --uninstall` para todo).
+
+## 2026-11-09 — burbujas en fila, 2 s por palabra
+- Esteban: **2 s por palabra** (antes 3; en chino 2 s por carácter + 2 s por palabra en pinyin o inglés; mínimo 2 s)
+  y el tiempo de cada burbuja **empieza a contar cuando se desvaneció la anterior** (se leen en orden).
+  `readingTime` y `_addBubble` en `core/pet.dart`; `Bubble.at` ahora es cuándo empieza a contar. 26 pruebas OK.
+- Falta reinstalar para verlo en la mascota:
+  `flutter build linux --release --no-tree-shake-icons && tool/install_linux.sh --autostart`.
+- **Crash de `--app` (sin resolver):** 3 volcados (4, 6 y 9 de nov.), siempre la ventana normal, nunca la mascota.
+  SIGSEGV en el hilo de dibujo de Flutter (Impeller, OpenGL ES) dentro de Mesa `libgallium` 26.2.5 (radeonsi,
+  Radeon 740M). No truena al abrir (25 s abierta sin tocarla, bien); el del 9 tronó a menos de un minuto de abrirla.
+  `FLUTTER_ENGINE_SWITCH_1=enable-impeller=false` no tiene efecto en el build release.
+
+### Siguiente
+- Saber en qué pantalla/acción truena `--app` para reproducirlo (`coredumpctl list laika_app`).

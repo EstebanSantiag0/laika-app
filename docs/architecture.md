@@ -46,8 +46,9 @@ muestra y envía.
 ```
 
 - Cualquier interacción (mouse encima, escribir, recibir burbuja) reinicia los 15 s.
-- Cada burbuja se queda su **tiempo de lectura** (`readingTime`: 3 s por palabra; cada carácter chino
-  2 s + 3 s por palabra en pinyin o inglés; mínimo 3 s) y se desvanece en 1.5 s. El desvanecimiento es por
+- Cada burbuja se queda su **tiempo de lectura** (`readingTime`: 2 s por palabra; cada carácter chino
+  2 s + 2 s por palabra en pinyin o inglés; mínimo 2 s) y se desvanece en 1.5 s. Van en fila: el tiempo de
+  cada una empieza a contar cuando se desvaneció la anterior. El desvanecimiento es por
   tiempo, no por posición (lo pone `PetStage`, igual en todas las variantes).
 - No se duerme hasta 15 s **después de que se desvanece la última burbuja** (Esteban, 2026-11-02).
 - Al despertar, después del saludo, UNA petición a `/api/resurface`: si hay algo guardado que recordarte,

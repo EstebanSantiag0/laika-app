@@ -18,8 +18,9 @@ por tiempo.
 **Laika tiene 16 caras** y las cambia según lo que pasa y lo que dice (se ríe
 con "jaja", se sorprende cuando suena un recordatorio, trama algo cuando lo
 anota, se apena si algo falla, come cuando le mandas un PDF o un link…).
-Sus mensajes se quedan el tiempo que toma leerlos (3 s por palabra; en chino
-2 s por carácter + 3 s por palabra en pinyin o inglés) y luego se desvanecen. Por defecto es un círculo blanco estilo
+Sus mensajes se quedan el tiempo que toma leerlos (2 s por palabra; en chino
+2 s por carácter + 2 s por palabra en pinyin o inglés; el tiempo de cada uno empieza a contar cuando se
+desvaneció el anterior) y luego se desvanecen. Por defecto es un círculo blanco estilo
 Brutal; puedes darle **tu propia skin** con imágenes (ver
 [`docs/SKINS.md`](docs/SKINS.md)) y elegirla en **Ajustes**, junto con su
 tamaño y el servidor.
