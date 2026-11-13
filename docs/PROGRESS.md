@@ -189,7 +189,8 @@
   `cards.new_per_day` (10 por defecto); `counts` = total, due, new, learning, suspended, trash, new_left_today;
   cada escritura → `{card, edit_id}`; reseñas = Edit `review` (deshacible), `client_id` obligatorio e idempotente;
   `unlock`; cambiar la lectura conserva el calendario; `gloss_es`/`gloss_en`; audio ogg/opus o 202 `{retry_after}`;
-  `/api/trash` trae `cards`; el evento `card` trae `counts`. `cards_due` en `/health`: lo decide Esteban
-  (`/health` es el endpoint abierto).
+  `/api/trash` trae `cards`; el evento `card` trae `counts`.
+- **Esteban (vía cc-server): las tarjetas van solo en la app, no en la mascota.** Sin `cards_due` en `/health`; la
+  mascota no muestra nada de tarjetas (ignora los eventos `card`).
 - **Esperando:** el "go" de Esteban. Luego: modelos + backend simulado → pestaña Tarjetas → HttpLaika → prueba en vivo
   cuando cc-server avise que está en su `docs/API.md` y en vivo.
