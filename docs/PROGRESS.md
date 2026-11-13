@@ -225,3 +225,10 @@
   y borrarla; luego `LAIKA_CARD=5 flutter test tool/cards_live_test.dart` (Aplicar, 409 al repetir, deshacer, No).
 - Para ver la pestaña en la app instalada hay que reinstalar (también reinicia la mascota):
   `flutter build linux --release --no-tree-shake-icons && tool/install_linux.sh --autostart && systemctl --user restart 'app-laika\x2dpet@autostart.service'`.
+- Fase 2: **3/3** (feed con las 2 sugerencias; Aplicar → 409 al repetir → deshacer; No a borrarla). Prueba conjunta
+  completa (14/14); las 5 tarjetas de prueba en la papelera.
+- **Instalado por Esteban** a las 12:38 (mascota + app con Tarjetas); sin volcados desde entonces.
+- Pendiente menor: cada doble clic (abrir `--app` con `Process.start(..., detached)`) deja un proceso `<defunct>` hijo
+  de la mascota (inofensivo, se van al reiniciarla). Arreglo posible: lanzar con `inheritStdio` y esperar su `exitCode`.
+- cc-server tiene la API de apariencia del chat (P6.4, `GET/PUT /api/appearance`, evento WS `appearance`); si la app la
+  sigue o no lo decide Esteban.
