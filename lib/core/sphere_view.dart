@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'brain.dart';
 import 'layouts.dart';
 import 'models.dart';
+import 'pace.dart';
 import 'widgets.dart';
 
 /// Colores y letras de la esfera.
@@ -63,15 +64,11 @@ class SphereView extends StatefulWidget {
   State<SphereView> createState() => _SphereViewState();
 }
 
-class _SphereViewState extends State<SphereView> with SingleTickerProviderStateMixin {
-  late final AnimationController _spin = AnimationController(vsync: this, duration: const Duration(seconds: 1))
-    ..addListener(() {
-      if (sc.spinning) {
-        sc.yaw += 0.0025;
-        sc._changed();
-      }
-    })
-    ..repeat();
+class _SphereViewState extends State<SphereView> {
+  /// El giro solo corre mientras gira y la ventana está al frente; antes pedía
+  /// 144 cuadros por segundo aunque estuviera en pausa.
+  final _spin = Pace(fps: 30, whenFocused: true);
+  double _lastT = 0;
   Map<String, Vec3> _pos = {};
   int _ver = -1;
   Map<String, Offset> _screen = {};
@@ -80,7 +77,42 @@ class _SphereViewState extends State<SphereView> with SingleTickerProviderStateM
   BrainController get b => widget.brain;
 
   @override
+  void initState() {
+    super.initState();
+    _spin.addListener(_turn);
+    sc.addListener(_spinChanged);
+    _spinChanged();
+  }
+
+  @override
+  void didUpdateWidget(SphereView old) {
+    super.didUpdateWidget(old);
+    if (old.controller != sc) {
+      old.controller.removeListener(_spinChanged);
+      sc.addListener(_spinChanged);
+      _spinChanged();
+    }
+  }
+
+  void _spinChanged() => _spin.on = sc.spinning;
+
+  /// 0.36 rad/s: lo que se veía antes (0.0025 por cuadro a 144 Hz).
+  void _turn() {
+    final t = _spin.t, dt = t - _lastT;
+    _lastT = t;
+    if (!sc.spinning) {
+      _spin.on = false; // se pausó arrastrando (sin aviso)
+      return;
+    }
+    if (dt > 0 && dt < 0.5) {
+      sc.yaw += 0.36 * dt;
+      sc._changed();
+    }
+  }
+
+  @override
   void dispose() {
+    sc.removeListener(_spinChanged);
     _spin.dispose();
     super.dispose();
   }

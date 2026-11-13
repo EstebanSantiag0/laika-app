@@ -25,6 +25,7 @@ import '../core/brain.dart';
 import '../core/deck.dart';
 import '../core/media.dart';
 import '../core/models.dart';
+import '../core/pace.dart';
 import '../core/pet.dart';
 import '../core/second_brain.dart';
 import '../core/session.dart';
@@ -79,8 +80,11 @@ class Aurora extends StatefulWidget {
   State<Aurora> createState() => _AuroraState();
 }
 
-class _AuroraState extends State<Aurora> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(seconds: 40))..repeat();
+class _AuroraState extends State<Aurora> {
+  /// Las manchas se mueven ~20 px por segundo y son difusas: 12 cuadros por
+  /// segundo se ven igual que 144. Quieto si la ventana no está al frente
+  /// (también deja de recalcular el vidrio esmerilado de encima).
+  final _c = Pace(fps: 12, whenFocused: true);
 
   @override
   void dispose() {
@@ -90,7 +94,8 @@ class _AuroraState extends State<Aurora> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) => RepaintBoundary(
-        child: AnimatedBuilder(animation: _c, builder: (context, _) => CustomPaint(painter: _AuroraPainter(_c.value * 6.283))),
+        child: AnimatedBuilder(
+            animation: _c, builder: (context, _) => CustomPaint(painter: _AuroraPainter(_c.t / 40 * 6.283))),
       );
 }
 
@@ -357,8 +362,12 @@ class LaikaSkin extends PetSkin {
 // ── La app (doble clic sobre Laika) ─────────────────────────────────────────
 
 class LaikaApp extends StatefulWidget {
-  const LaikaApp({super.key, required this.session, this.showDesktop = true, this.initialTab = 0});
+  const LaikaApp({super.key, required this.session, this.showDesktop = true, this.initialTab = 0, this.onQuit});
   final LaikaSession session;
+
+  /// Ajustes → «Cerrar Laika»: cierra la mascota y la app (solo en el
+  /// escritorio real; en los prototipos y las pruebas no aparece).
+  final Future<void> Function()? onQuit;
 
   /// En los prototipos se muestra también el escritorio simulado. En la app
   /// real (ventana normal) Laika ya está en tu escritorio de verdad.
@@ -388,7 +397,7 @@ class _LaikaAppState extends State<LaikaApp> {
         ('Tarjetas', () => LaikaCards(deck: widget.session.deck)),
         ('Agenda', () => LaikaAgenda(rem: widget.session.reminders)),
         ('Emociones', () => const MoodSheet()),
-        ('Ajustes', () => const LaikaSettings()),
+        ('Ajustes', () => LaikaSettings(onQuit: widget.onQuit)),
       ];
 
   @override
@@ -685,9 +694,8 @@ class MoodSheet extends StatefulWidget {
   State<MoodSheet> createState() => _MoodSheetState();
 }
 
-class _MoodSheetState extends State<MoodSheet> with SingleTickerProviderStateMixin {
-  late final AnimationController _a = AnimationController(vsync: this, duration: const Duration(seconds: 1))..repeat();
-  final _watch = Stopwatch()..start();
+class _MoodSheetState extends State<MoodSheet> {
+  final _a = Pace(fps: 30, whenFocused: true);
 
   @override
   void dispose() {
@@ -705,7 +713,7 @@ class _MoodSheetState extends State<MoodSheet> with SingleTickerProviderStateMix
             width: 150,
             child: AnimatedBuilder(
               animation: _a,
-              builder: (context, _) => look.build(mood, lying: lying, t: _watch.elapsedMilliseconds / 1000),
+              builder: (context, _) => look.build(mood, lying: lying, t: _a.t),
             ),
           ),
           Text(label, style: _t(15, w: FontWeight.w900)),
@@ -744,14 +752,14 @@ class _MoodSheetState extends State<MoodSheet> with SingleTickerProviderStateMix
 /// Skin, tamaño de Laika y servidor. Se guarda en ~/.config/laika/config.json;
 /// la mascota del escritorio (--pet) lo nota al instante.
 class LaikaSettings extends StatefulWidget {
-  const LaikaSettings({super.key});
+  const LaikaSettings({super.key, this.onQuit});
+  final Future<void> Function()? onQuit;
   @override
   State<LaikaSettings> createState() => _LaikaSettingsState();
 }
 
-class _LaikaSettingsState extends State<LaikaSettings> with SingleTickerProviderStateMixin {
-  late final AnimationController _a = AnimationController(vsync: this, duration: const Duration(seconds: 1))..repeat();
-  final _watch = Stopwatch()..start();
+class _LaikaSettingsState extends State<LaikaSettings> {
+  final _a = Pace(fps: 30, whenFocused: true);
   late final _server = TextEditingController(text: config.value.server ?? '');
   List<PetSkinLook> _skins = availableSkins();
   String? _saved;
@@ -808,7 +816,7 @@ class _LaikaSettingsState extends State<LaikaSettings> with SingleTickerProvider
                         height: 110,
                         child: AnimatedBuilder(
                           animation: _a,
-                          builder: (context, _) => s.build(Mood.neutral, t: _watch.elapsedMilliseconds / 1000),
+                          builder: (context, _) => s.build(Mood.neutral, t: _a.t),
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -876,8 +884,40 @@ class _LaikaSettingsState extends State<LaikaSettings> with SingleTickerProvider
               ),
             ]),
           ),
+          if (widget.onQuit != null)
+            _section(
+              'Cerrar Laika',
+              'Cierra la mascota del escritorio y esta ventana (por ejemplo, de viaje). Vuelve sola al iniciar '
+                  'sesión, o ábrela desde el menú: «Laika (mascota)».',
+              Align(
+                alignment: Alignment.centerLeft,
+                child: GestureDetector(
+                  onTap: _confirmQuit,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: brutalBox(lPink, shadow: 3, border: 2),
+                    child: Text('⏻  Cerrar Laika', style: _t(14, w: FontWeight.w800)),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
+  }
+
+  Future<void> _confirmQuit() async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('¿Cerrar Laika?', style: _t(20, w: FontWeight.w900)),
+        content: Text('Se cierran la mascota y esta ventana.', style: _t(14)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Cerrar')),
+        ],
+      ),
+    );
+    if (yes == true) await widget.onQuit?.call();
   }
 }

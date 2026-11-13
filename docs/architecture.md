@@ -121,6 +121,32 @@ laika_app --pet
   Cuando pasa, el journal dice `zona de clics reaplicada`.
 - La caja de texto avisa al servidor que estás escribiendo
   (`PetController.composing`), y deja de avisar al vaciarla o al salir de ella.
+- **Cerrar Laika** (Ajustes, solo en `--app` y en el `--pet` de ventana normal):
+  `desktop/quit.dart` busca en `/proc` los `laika_app --pet` (menos el propio
+  proceso), les manda SIGTERM y cierra la app con `System.exitApplication`. El
+  servicio de inicio de sesión tiene `Restart=no`, así que no vuelve hasta el
+  próximo inicio de sesión o el lanzador «Laika (mascota)».
+
+### Batería: animaciones sin fin (`core/pace.dart`)
+
+El motor de Linux pide cuadros al ritmo de la pantalla (144 Hz en la laptop de
+Esteban), y cada cuadro vuelve a componer la ventana entera aunque nada cambie.
+Con `AnimationController.repeat()` la mascota dormida gastaba ~20 % de un núcleo
+y la app ~60 % (el fondo Aurora cambiaba y el vidrio esmerilado se recalculaba
+en cada cuadro). Ahora esas animaciones usan `Pace`, un `Timer` a pocos cuadros
+por segundo que se puede pausar (su tiempo `t` no avanza en pausa: sin saltos):
+
+| Qué | Ritmo | Se detiene |
+|---|---|---|
+| Mascota (`PetStage`) | 10 fps dormida, 30 despierta | mientras se esconde para una captura |
+| Fondo Aurora | 12 fps | ventana sin foco o minimizada (`whenFocused`) |
+| Esfera del cerebro | 30 fps, giro por tiempo (0.36 rad/s) | en pausa, o ventana sin foco |
+| Caritas de Emociones y Ajustes | 30 fps | ventana sin foco |
+
+Medido en un KWin anidado de 60 Hz (renderizado por software, por eso los
+números son altos): mascota 29 % → 5 %; app al frente 38 % → 26 %; app detrás
+de otra ventana 34 % → 0 %. Las transiciones cortas (burbujas, opacidad) siguen
+siendo animaciones normales de Flutter.
 
 ### Cliente real (`HttpLaika`)
 
@@ -149,4 +175,6 @@ calculan desde "ahora" para que la agenda siempre se vea con "hoy/mañana".
 - `test/smoke_test.dart`: por cada diseño, despertar con mouse, enviar mensaje,
   comprobar el lado de las burbujas, dormirse a los 15 s, servidor caído, y
   dibujar Cerebro y Agenda sin errores. Más: lado izquierdo y recordatorio al despertar.
+- `test/battery_quit_test.dart`: `Pace` (ritmo, pausa, sin foco), encontrar las
+  mascotas en `/proc`, y el botón Cerrar Laika (pregunta antes; no sale en los prototipos).
 - `tool/screenshots_test.dart`: genera `docs/screenshots/` con fuentes reales.

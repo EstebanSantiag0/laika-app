@@ -16,6 +16,7 @@ import 'core/config.dart';
 import 'core/http_laika.dart';
 import 'core/session.dart';
 import 'desktop/pet_overlay.dart';
+import 'desktop/quit.dart';
 import 'desktop/window_bridge.dart';
 import 'variants/laika.dart';
 import 'variants/variants.dart';
@@ -35,11 +36,11 @@ Future<void> main(List<String> args) async {
       return;
     }
     // Sin capa transparente (X11 o sin gtk-layer-shell): la mascota en una ventana normal.
-    runApp(LaikaApp(session: session(), initialTab: 0));
+    runApp(LaikaApp(session: session(), initialTab: 0, onQuit: quitLaika));
     return;
   }
   if (args.contains('--app')) {
-    runApp(LaikaApp(session: session(), showDesktop: false));
+    runApp(LaikaApp(session: session(), showDesktop: false, onQuit: quitLaika));
     return;
   }
   runApp(const LaikaPrototypes());

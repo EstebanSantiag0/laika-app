@@ -232,7 +232,7 @@
   de la mascota. Ahora se lanza como hijo normal (`inheritStdio`) y la mascota espera su `exitCode`
   (`desktop/pet_overlay.dart`). Comprobado con un script: `detached` deja 1 zombi por lanzamiento, así 0.
   Instalado por Esteban a las 16:37: sin `<defunct>`.
-- **CPU (sin resolver, avisado a Esteban):** la mascota sola usa ~16 % de un núcleo todo el tiempo (medido 8 s,
+- **CPU (resuelto más abajo, 17:30):** la mascota sola usa ~16 % de un núcleo todo el tiempo (medido 8 s,
   16:37). Con la ventana `--app` abierta de 12:38 a 16:37, el servicio gastó 3 h 10 min de CPU en 4 h (~80 %): la
   app se come ~60 % aunque no la mires. Sospecha: animaciones que nunca paran (fondo Aurora, `AnimationController`
   en `repeat()`), también dormida. Esperando el OK de Esteban para revisarlo.
@@ -240,3 +240,26 @@
   (la app no la sigue por ahora).
 - **Subido a GitHub** (`3424eba..a6f7ffe`, 15 commits) con el OK de Esteban, después de revisar el diff: sin
   secretos ni la URL del servidor.
+
+## 2026-11-13 (tarde, 3) — batería y "Cerrar Laika"
+- Esteban: "yes please" (revisar el CPU) y "add an option inside the app to close the pet and the app because when
+  travelling, it'll be a problem".
+- **Causa del CPU:** el motor de Linux pide cuadros al ritmo de la pantalla (144 Hz) y cada cuadro recompone la
+  ventana entera. Con `AnimationController.repeat()` la mascota se dibujaba 144 veces por segundo aunque estuviera
+  dormida; en la app, el fondo Aurora, la esfera que gira (por defecto) y el vidrio esmerilado encima, igual.
+- **Arreglo:** `core/pace.dart` (`Pace`, un `Timer` a pocos fps que se puede pausar). Mascota: 10 fps dormida,
+  30 despierta. Aurora 12 fps; esfera 30 fps con giro por tiempo (misma velocidad que se veía: 0.36 rad/s);
+  caritas de Emociones/Ajustes 30 fps. En la app todo eso se queda quieto si la ventana no tiene el foco.
+- Medido (KWin anidado a 60 Hz, sin pantalla): mascota **29 % → 5 %**; app al frente **38 % → 26 %**; app detrás de
+  otra ventana **34 % → 0 %**. En la pantalla real (144 Hz) la mascota pasaba de ~20 %; falta medirla instalada.
+- **Ajustes → Cerrar Laika** (`desktop/quit.dart`): pregunta antes; manda SIGTERM a los `laika_app --pet` del
+  usuario (los busca en `/proc`) y cierra la app. Vuelve al iniciar sesión o con «Laika (mascota)» del menú.
+  Solo aparece en `--app` (y en el `--pet` de ventana normal), no en los prototipos. Probado en seco: encuentra la
+  mascota real sin tocarla.
+- 47 pruebas OK (`test/battery_quit_test.dart`, 5 nuevas), `flutter analyze` limpio. Build release listo.
+- Limpieza: procesos de prueba que dejé huérfanos (dbus/portal de los KWin anidados de hoy), cerrados.
+
+### Siguiente
+- Esteban: instalar y reiniciar la mascota (también cierra la app si está abierta):
+  `tool/install_linux.sh --autostart && systemctl --user restart 'app-laika\x2dpet@autostart.service'`
+- Después: medir la mascota real con `/proc` (antes ~20 %).

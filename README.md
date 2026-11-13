@@ -150,7 +150,11 @@ Con `--pet` la ventana es una capa transparente que cubre la pantalla, pero
 - Pasa el mouse sobre ella: hace **una** petición a `/health` y despierta solo si el servidor responde.
 - **1 clic:** abre la caja para escribirle. **2 clics:** abre la app completa en una ventana normal.
 - Arrástrala a donde quieras; sus mensajes salen del lado con más espacio.
+- **Cerrarla** (por ejemplo, de viaje): en la app, **Ajustes → Cerrar Laika** cierra la mascota y la ventana.
+  Vuelve sola al iniciar sesión, o ábrela desde el menú: «Laika (mascota)».
 - Si algo sale mal: `pkill laika_app`.
+- Batería: dormida, Laika se dibuja 10 veces por segundo (despierta, 30) en vez de en cada refresco de la
+  pantalla, y el fondo de la app y la esfera del cerebro se quedan quietos si la ventana no está al frente.
 
 En X11 o sin `gtk-layer-shell`, `--pet` abre una ventana normal con el escritorio simulado.
 
@@ -226,7 +230,7 @@ tiempo (Cristal).
 
 ```bash
 flutter analyze        # revisa el código
-flutter test           # 42 pruebas: despertar, burbujas a su lado, dormirse, servidor caído, tarjetas...
+flutter test           # 47 pruebas: despertar, burbujas a su lado, dormirse, servidor caído, tarjetas...
 ```
 
 Las capturas de `docs/screenshots/` se generan con las fuentes de tu sistema:
@@ -252,6 +256,7 @@ lib/
 │   ├── mock_backend.dart  servidor simulado
 │   ├── sample_data.dart   recuerdos de ejemplo (ficticios)
 │   ├── pet.dart           reglas de la mascota (dormir, despertar, burbujas)
+│   ├── pace.dart          reloj lento para las animaciones sin fin (ahorra batería)
 │   ├── stage.dart         el escritorio y la regla de "mensajes a su lado"
 │   ├── brain.dart         filtros del cerebro y agenda
 │   ├── layouts.dart       cómo se acomodan los nodos (esfera, radial, fuerzas…)
@@ -260,6 +265,7 @@ lib/
 │   └── widgets.dart       piezas reutilizables
 ├── desktop/               Laika sobre el escritorio real (Linux)
 │   ├── pet_overlay.dart   la capa transparente
+│   ├── quit.dart          Ajustes → Cerrar Laika (mascota + app)
 │   └── window_bridge.dart qué zonas reciben clics (canal con linux/runner)
 ├── pets/
 │   ├── circle_face.dart   la cara-círculo por defecto: 16 emociones y 2 formas de dormir

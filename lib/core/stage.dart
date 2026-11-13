@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 
 import 'media.dart';
 import 'models.dart';
+import 'pace.dart';
 import 'pet.dart';
 
 /// Lo que cada variante dibuja a su manera.
@@ -180,10 +181,11 @@ class PetStage extends StatefulWidget {
   State<PetStage> createState() => _PetStageState();
 }
 
-class _PetStageState extends State<PetStage> with SingleTickerProviderStateMixin {
-  late final AnimationController _anim =
-      AnimationController(vsync: this, duration: const Duration(seconds: 1))..repeat();
-  final _watch = Stopwatch()..start();
+class _PetStageState extends State<PetStage> {
+  /// Despierta: 30 cuadros por segundo (rebotes, puntitos, burbujas). Dormida
+  /// solo respira y suben las "z": con 10 se ve igual y gasta mucho menos.
+  late final Pace _anim = Pace(fps: _fps);
+  int get _fps => c.mood == Mood.sleeping ? 10 : 30;
   final _text = TextEditingController();
   final _focus = FocusNode();
   Offset? _pos; // esquina superior izquierda de Laika
@@ -247,6 +249,9 @@ class _PetStageState extends State<PetStage> with SingleTickerProviderStateMixin
     }
     _wasOpen = c.chatOpen;
     if (!c.chatOpen) _menuOpen = _langOpen = false;
+    _anim
+      ..fps = _fps
+      ..on = !c.hiddenForShot;
     setState(() {});
   }
 
@@ -357,7 +362,7 @@ class _PetStageState extends State<PetStage> with SingleTickerProviderStateMixin
               child: AnimatedBuilder(
                 animation: _anim,
                 builder: (context, _) {
-                  final t = _watch.elapsedMilliseconds / 1000;
+                  final t = _anim.t;
                   final cross = petOnRight ? CrossAxisAlignment.end : CrossAxisAlignment.start;
                   final n = c.bubbles.length;
                   final now = c.now();
@@ -479,7 +484,7 @@ class _PetStageState extends State<PetStage> with SingleTickerProviderStateMixin
                 child: AnimatedBuilder(
                   animation: _anim,
                   builder: (context, _) =>
-                      skin.pet(context, c, _watch.elapsedMilliseconds / 1000),
+                      skin.pet(context, c, _anim.t),
                 ),
               ),
             ),
@@ -494,7 +499,7 @@ class _PetStageState extends State<PetStage> with SingleTickerProviderStateMixin
                 builder: (context, _) => Center(
                   child: KeyedSubtree(
                     key: _statusKey,
-                    child: skin.status(context, c, _watch.elapsedMilliseconds / 1000) ?? const SizedBox.shrink(),
+                    child: skin.status(context, c, _anim.t) ?? const SizedBox.shrink(),
                   ),
                 ),
               ),
