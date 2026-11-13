@@ -8,6 +8,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'api.dart';
+import 'mock_cards.dart';
 import 'models.dart';
 import 'sample_data.dart';
 
@@ -28,8 +29,12 @@ class MockLaika implements LaikaApi {
               progress: {'chunks': {'done': 38, 'failed': 0, 'todo': 0}}),
           createdAt: t.subtract(const Duration(days: 1))),
     ];
+    cardStore = MockCardStore(t);
     _ticker = Timer.periodic(const Duration(seconds: 2), (_) => _checkReminders());
   }
+
+  /// Las tarjetas simuladas (ver mock_cards.dart).
+  late final MockCardStore cardStore;
 
   /// ¿El servidor simulado contesta? (lo cambia el panel de simulación)
   bool online = true;
@@ -600,7 +605,98 @@ class MockLaika implements LaikaApi {
     return Trash(
       [for (final t in _trash.reversed) t.$1],
       [for (final e in _hiddenEdges.entries) HiddenEdge(e.value, _hidden[e.key])],
+      cards: cardStore.trash(),
     );
+  }
+
+  // ── Tarjetas ──────────────────────────────────────────────────────────────
+
+  CardWrite _cardEvent(String op, CardWrite w, {CardWho who = CardWho.him}) {
+    if (w.editId != null) _events.add(CardEvent(op, w.card, who: who, editId: w.editId, counts: cardStore.counts()));
+    return w;
+  }
+
+  @override
+  Future<CardPage> cards({String filter = 'all', String? q, int? before, int limit = 500}) async {
+    await _net();
+    return cardStore.list(filter: filter, q: q, before: before, limit: limit);
+  }
+
+  @override
+  Future<(Flashcard, List<CardEdit>)> card(int id) async {
+    await _net();
+    return cardStore.get(id);
+  }
+
+  @override
+  Future<CardWrite> createCard(
+      {required String front, String? reading, String? word, String? meaningEs, String? meaningEn, String? note}) async {
+    await _net();
+    return _cardEvent('created',
+        cardStore.create(front: front, reading: reading, word: word, meaningEs: meaningEs, meaningEn: meaningEn, note: note));
+  }
+
+  @override
+  Future<CardWrite> patchCard(int id, Map<String, Object?> fields, {String? baseUpdatedAt, List<String>? unlock}) async {
+    await _net();
+    return _cardEvent('edited', cardStore.patch(id, fields, baseUpdatedAt: baseUpdatedAt, unlock: unlock));
+  }
+
+  @override
+  Future<CardWrite> deleteCard(int id) async {
+    await _net();
+    return _cardEvent('deleted', cardStore.delete(id));
+  }
+
+  @override
+  Future<CardWrite> restoreCard(int id) async {
+    await _net();
+    return _cardEvent('restored', cardStore.restore(id));
+  }
+
+  @override
+  Future<DueCards> dueCards({int limit = 20}) async {
+    await _net();
+    return cardStore.due(limit: limit);
+  }
+
+  @override
+  Future<CardWrite> reviewCard(int id, int rating, {required String clientId, int? durationMs, DateTime? reviewedAt}) async {
+    await _net();
+    return _cardEvent('reviewed', cardStore.review(id, rating, clientId: clientId, durationMs: durationMs, reviewedAt: reviewedAt));
+  }
+
+  @override
+  Future<CardWrite> undoCardEdit(int editId) async {
+    await _net();
+    return _cardEvent('edited', cardStore.undo(editId));
+  }
+
+  @override
+  Future<CardWrite> answerSuggestion(int editId, {required bool apply}) async {
+    await _net();
+    return _cardEvent('edited', cardStore.answer(editId, apply: apply), who: apply ? CardWho.laika : CardWho.him);
+  }
+
+  @override
+  Future<CardEditPage> cardEdits({String? who, String? op, bool pending = false, int? before, int limit = 50}) async {
+    await _net();
+    return cardStore.edits(who: who, op: op, pending: pending, before: before, limit: limit);
+  }
+
+  /// El simulador no tiene audio.
+  @override
+  Future<String?> cardAudio(int id) async {
+    await _net();
+    return null;
+  }
+
+  /// Simulación: Laika corrige una tarjeta como si lo hubiera aprendido en el
+  /// chat. Si el campo es tuyo (bloqueado), solo lo sugiere.
+  void laikaEditsCard(int id, Map<String, Object?> fields, {String? reason}) {
+    final e = cardStore.laikaEdits(id, fields, reason: reason);
+    _events.add(CardEvent('edited', cardStore.card(id),
+        who: CardWho.laika, editId: e.id, counts: cardStore.counts()));
   }
 
   Item _save(String title, String format, {String kind = 'saved', String? url}) {

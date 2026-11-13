@@ -50,7 +50,7 @@ class HttpLaika implements LaikaApi {
     return text.isEmpty ? null : jsonDecode(text);
   }
 
-  /// Convierte {"error", "field"?, "max_mb"?, "node_id"?} en [LaikaApiError].
+  /// Convierte {"error", "field"?, "max_mb"?, "node_id"?, "card_id"?} en [LaikaApiError].
   void _check(int status, String text) {
     if (status < 400) return;
     if (status == 403) throw const LaikaApiError(403, 'El servidor rechazó la conexión (¿estás en Tailscale?)');
@@ -60,7 +60,10 @@ class HttpLaika implements LaikaApi {
       if (d is Map) j = d;
     } catch (_) {}
     throw LaikaApiError(status, (j?['error'] ?? j?['detail'] ?? 'Error $status del servidor').toString(),
-        field: j?['field'] as String?, maxMb: (j?['max_mb'] as num?)?.toInt(), nodeId: j?['node_id'] as String?);
+        field: j?['field'] as String?,
+        maxMb: (j?['max_mb'] as num?)?.toInt(),
+        nodeId: j?['node_id'] as String?,
+        cardId: (j?['card_id'] as num?)?.toInt());
   }
 
   /// Un id del grafo dentro de una ruta ("fact:12" → "fact%3A12").
@@ -301,6 +304,118 @@ class HttpLaika implements LaikaApi {
   @override
   Future<Trash> trash() async => Trash.fromJson(await _request('GET', '/api/trash') as Map<String, dynamic>);
 
+  // ── Tarjetas ──────────────────────────────────────────────────────────────
+
+  static CardWrite _cardWrite(Object? j) => CardWrite.fromJson(j as Map<String, dynamic>);
+
+  @override
+  Future<CardPage> cards({String filter = 'all', String? q, int? before, int limit = 500}) async =>
+      CardPage.fromJson(await _request('GET', '/api/cards', query: {
+        'filter': filter,
+        if (q != null && q.trim().isNotEmpty) 'q': q.trim(),
+        if (before != null) 'before': '$before',
+        'limit': '$limit',
+      }) as Map<String, dynamic>);
+
+  @override
+  Future<(Flashcard, List<CardEdit>)> card(int id) async {
+    final j = await _request('GET', '/api/cards/$id') as Map<String, dynamic>;
+    return (
+      Flashcard.fromJson(j['card'] as Map<String, dynamic>),
+      [for (final e in (j['history'] as List? ?? const []).whereType<Map<String, dynamic>>()) CardEdit.fromJson(e)],
+    );
+  }
+
+  @override
+  Future<CardWrite> createCard(
+          {required String front, String? reading, String? word, String? meaningEs, String? meaningEn, String? note}) async =>
+      _cardWrite(await _request('POST', '/api/cards', body: {
+        'front': front,
+        'reading': ?reading,
+        'word': ?word,
+        'meaning_es': ?meaningEs,
+        'meaning_en': ?meaningEn,
+        'note': ?note,
+      }));
+
+  @override
+  Future<CardWrite> patchCard(int id, Map<String, Object?> fields, {String? baseUpdatedAt, List<String>? unlock}) async =>
+      _cardWrite(await _request('PATCH', '/api/cards/$id', body: {
+        ...fields,
+        'base_updated_at': ?baseUpdatedAt,
+        if (unlock != null && unlock.isNotEmpty) 'unlock': unlock,
+      }));
+
+  @override
+  Future<CardWrite> deleteCard(int id) async => _cardWrite(await _request('DELETE', '/api/cards/$id'));
+
+  @override
+  Future<CardWrite> restoreCard(int id) async => _cardWrite(await _request('POST', '/api/cards/$id/restore'));
+
+  @override
+  Future<DueCards> dueCards({int limit = 20}) async =>
+      DueCards.fromJson(await _request('GET', '/api/cards/due', query: {'limit': '$limit'}) as Map<String, dynamic>);
+
+  @override
+  Future<CardWrite> reviewCard(int id, int rating, {required String clientId, int? durationMs, DateTime? reviewedAt}) async =>
+      _cardWrite(await _request('POST', '/api/cards/$id/review', body: {
+        'rating': rating,
+        'client_id': clientId,
+        'duration_ms': ?durationMs,
+        if (reviewedAt != null) 'reviewed_at': reviewedAt.toUtc().toIso8601String(),
+      }));
+
+  @override
+  Future<CardWrite> undoCardEdit(int editId) async => _cardWrite(await _request('POST', '/api/cards/edits/$editId/undo'));
+
+  @override
+  Future<CardWrite> answerSuggestion(int editId, {required bool apply}) async =>
+      _cardWrite(await _request('POST', '/api/cards/suggestions/$editId', body: {'apply': apply}));
+
+  @override
+  Future<CardEditPage> cardEdits({String? who, String? op, bool pending = false, int? before, int limit = 50}) async =>
+      CardEditPage.fromJson(await _request('GET', '/api/cards/edits', query: {
+        'who': ?who,
+        'op': ?op,
+        if (pending) 'pending': 'true',
+        if (before != null) 'before': '$before',
+        'limit': '$limit',
+      }) as Map<String, dynamic>);
+
+  /// Baja el audio (ogg/opus) a un archivo temporal. El servidor lo genera la
+  /// primera vez: si contesta 202 {retry_after}, se espera y se vuelve a pedir.
+  @override
+  Future<String?> cardAudio(int id) async {
+    final uri = base.replace(path: '${base.path}/api/cards/$id/audio');
+    for (var attempt = 0; attempt < 3; attempt++) {
+      final HttpClientResponse res;
+      final List<int> bytes;
+      try {
+        final req = await _http.getUrl(uri).timeout(const Duration(seconds: 8));
+        res = await req.close().timeout(const Duration(seconds: 20));
+        bytes = await res.fold<List<int>>(<int>[], (a, b) => a..addAll(b));
+      } catch (e) {
+        throw LaikaOffline('El servidor de Laika no responde ($e)');
+      }
+      if (res.statusCode == 202) {
+        Object? j;
+        try {
+          j = jsonDecode(utf8.decode(bytes));
+        } catch (_) {}
+        final wait = ((j is Map ? j['retry_after'] : null) as num?)?.toDouble() ?? 3;
+        await Future<void>.delayed(Duration(milliseconds: (wait.clamp(1, 10) * 1000).round()));
+        continue;
+      }
+      if (res.statusCode == 404) return null;
+      _check(res.statusCode, utf8.decode(bytes, allowMalformed: true));
+      final dir = await Directory.systemTemp.createTemp('laika_card_');
+      final f = File('${dir.path}/card-$id.ogg');
+      await f.writeAsBytes(bytes);
+      return f.path;
+    }
+    throw const LaikaApiError(504, 'El audio todavía no está listo; inténtalo en un momento');
+  }
+
   // ── WebSocket ─────────────────────────────────────────────────────────────
 
   Future<WebSocket> _socket() {
@@ -364,6 +479,9 @@ class HttpLaika implements LaikaApi {
       case 'item':
         final it = j['item'];
         if (it is Map<String, dynamic>) _events.add(ItemEvent(Item.fromJson(it)));
+      case 'card':
+        // Solo para la pestaña Tarjetas; la mascota los ignora.
+        if (j['card'] is Map<String, dynamic>) _events.add(CardEvent.fromJson(j));
       case 'reminder':
         final r = j['reminder'];
         if (r is Map<String, dynamic>) _events.add(ReminderEvent(Reminder.fromJson(r)));

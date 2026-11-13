@@ -4,7 +4,10 @@
 // implementa MockLaika (backend simulado); después se añadirá HttpLaika, que
 // hablará con el servidor real por HTTPS + WebSocket a través de Tailscale.
 
+import 'cards.dart';
 import 'models.dart';
+
+export 'cards.dart';
 
 abstract class LaikaApi {
   /// GET /health — se llama al pasar el mouse sobre Laika dormida.
@@ -101,6 +104,48 @@ abstract class LaikaApi {
   /// GET /api/trash
   Future<Trash> trash();
 
+  // ── Tarjetas (hanzi + FSRS). Solo la app: la mascota no las muestra. ──────
+
+  /// GET /api/cards (filter: all|due|new|his|hers|hard|trash). El mazo es chico
+  /// (decenas a cientos), así que se pide todo de una vez y se busca aquí.
+  Future<CardPage> cards({String filter = 'all', String? q, int? before, int limit = 500});
+
+  /// GET /api/cards/{id}: la tarjeta y su historial.
+  Future<(Flashcard, List<CardEdit>)> card(int id);
+
+  /// POST /api/cards. El servidor llena lo que falte (pinyin, significados).
+  /// 409 con [LaikaApiError.cardId] si ese carácter con esa lectura ya existe.
+  Future<CardWrite> createCard({required String front, String? reading, String? word, String? meaningEs, String? meaningEn, String? note});
+
+  /// PATCH /api/cards/{id}: los campos que mandas quedan bloqueados para Laika;
+  /// [unlock] se los devuelve. 409 si cambió desde [baseUpdatedAt].
+  Future<CardWrite> patchCard(int id, Map<String, Object?> fields, {String? baseUpdatedAt, List<String>? unlock});
+
+  /// DELETE /api/cards/{id}: a la papelera (30 días).
+  Future<CardWrite> deleteCard(int id);
+
+  /// POST /api/cards/{id}/restore
+  Future<CardWrite> restoreCard(int id);
+
+  /// GET /api/cards/due: repasos que tocan + nuevas hasta el tope del día, con `preview` y `now`.
+  Future<DueCards> dueCards({int limit = 20});
+
+  /// POST /api/cards/{id}/review (1 Otra vez · 2 Difícil · 3 Bien · 4 Fácil).
+  /// [clientId] hace que repetirlo (sin red, reintento) no cuente dos veces.
+  Future<CardWrite> reviewCard(int id, int rating, {required String clientId, int? durationMs, DateTime? reviewedAt});
+
+  /// POST /api/cards/edits/{id}/undo. 409 si un cambio posterior tocó lo mismo.
+  Future<CardWrite> undoCardEdit(int editId);
+
+  /// POST /api/cards/suggestions/{id}: Aplicar (true) o No (false).
+  Future<CardWrite> answerSuggestion(int editId, {required bool apply});
+
+  /// GET /api/cards/edits: los cambios y sugerencias (de Laika, tuyos o de ambos).
+  Future<CardEditPage> cardEdits({String? who, String? op, bool pending = false, int? before, int limit = 50});
+
+  /// GET /api/cards/{id}/audio bajado a un archivo (ogg/opus), o null si no hay audio.
+  Future<String?> cardAudio(int id);
+
   /// GET /api/settings: idioma de práctica (`practice_lang`), correcciones, voz…
   Future<Map<String, dynamic>> settings();
 
@@ -123,7 +168,7 @@ abstract class LaikaApi {
 
 /// El servidor contestó con un error ({"error", "field"?, "max_mb"?, "node_id"?}).
 class LaikaApiError extends LaikaOffline {
-  const LaikaApiError(this.status, super.message, {this.field, this.maxMb, this.nodeId});
+  const LaikaApiError(this.status, super.message, {this.field, this.maxMb, this.nodeId, this.cardId});
   final int status;
 
   /// 422: qué campo está mal.
@@ -134,6 +179,9 @@ class LaikaApiError extends LaikaOffline {
 
   /// 409: el nodo que cambió mientras lo editabas.
   final String? nodeId;
+
+  /// 409 al crear o cambiar la lectura: la tarjeta que ya existe.
+  final int? cardId;
 
   bool get conflict => status == 409;
 }

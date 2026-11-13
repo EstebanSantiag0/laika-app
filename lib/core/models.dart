@@ -6,6 +6,8 @@
 
 import 'package:flutter/material.dart';
 
+import 'cards.dart';
+
 /// Qué tan "vivo" está un recuerdo en el tiempo.
 enum TimeScope {
   /// Siempre válido: "hablo español", "estudio ingeniería".
@@ -498,6 +500,27 @@ class ItemEvent extends LaikaEvent {
   final Item item;
 }
 
+/// Una tarjeta cambió ({"type":"card", op, who, card, edit_id?, counts}).
+/// Solo la usa la pestaña Tarjetas: la mascota no muestra nada de tarjetas.
+class CardEvent extends LaikaEvent {
+  const CardEvent(this.op, this.card, {this.who = CardWho.him, this.editId, this.counts});
+
+  /// created | edited | deleted | restored | reviewed
+  final String op;
+  final Flashcard card;
+  final CardWho who;
+  final int? editId;
+  final CardCounts? counts;
+
+  factory CardEvent.fromJson(Map<String, dynamic> j) => CardEvent(
+        j['op'] as String? ?? 'edited',
+        Flashcard.fromJson(j['card'] as Map<String, dynamic>),
+        who: CardWho.parse(j['who']),
+        editId: (j['edit_id'] as num?)?.toInt(),
+        counts: j['counts'] is Map<String, dynamic> ? CardCounts.fromJson(j['counts'] as Map<String, dynamic>) : null,
+      );
+}
+
 /// Algo guardado en el segundo cerebro: una idea, algo para después o un
 /// archivo/link (contrato: PLAN-second-brain §5 y docs/API.md del servidor).
 class Item {
@@ -738,13 +761,17 @@ class TrashResult {
 
 /// GET /api/trash
 class Trash {
-  const Trash(this.nodes, this.hiddenEdges);
+  const Trash(this.nodes, this.hiddenEdges, {this.cards = const []});
   final List<TrashedNode> nodes;
   final List<HiddenEdge> hiddenEdges;
+
+  /// Tarjetas borradas (vuelven con POST /api/cards/{id}/restore).
+  final List<Flashcard> cards;
 
   factory Trash.fromJson(Map<String, dynamic> j) => Trash(
         [for (final n in (j['nodes'] as List? ?? const [])) TrashedNode.fromJson(n as Map<String, dynamic>)],
         [for (final e in (j['hidden_edges'] as List? ?? const [])) HiddenEdge.fromJson(e as Map<String, dynamic>)],
+        cards: [for (final c in (j['cards'] as List? ?? const []).whereType<Map<String, dynamic>>()) Flashcard.fromJson(c)],
       );
 }
 

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'api.dart';
 import 'brain.dart';
+import 'deck.dart';
 import 'mock_backend.dart';
 import 'models.dart';
 import 'pet.dart';
@@ -17,6 +18,7 @@ class LaikaSession {
     brain = BrainController(this.api);
     reminders = RemindersController(this.api);
     saved = SecondBrainController(this.api);
+    deck = DeckController(this.api);
   }
 
   final LaikaApi api;
@@ -25,11 +27,15 @@ class LaikaSession {
   late final RemindersController reminders;
   late final SecondBrainController saved;
 
+  /// Tarjetas (solo la app).
+  late final DeckController deck;
+
   void dispose() {
     pet.dispose();
     brain.dispose();
     reminders.dispose();
     saved.dispose();
+    deck.dispose();
     api.dispose();
   }
 }

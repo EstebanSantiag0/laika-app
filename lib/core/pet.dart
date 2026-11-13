@@ -545,6 +545,10 @@ class PetController extends ChangeNotifier {
         final fresh = _seenItems.add(item.id) &&
             clock.now().difference(item.createdAt ?? clock.now()) < const Duration(minutes: 2);
         if (fresh) react(Mood.eating, const Duration(seconds: 4));
+      case CardEvent():
+        // Las tarjetas son solo de la app (decisión de Esteban): la mascota no
+        // reacciona ni se queda despierta por ellas.
+        return;
     }
     touch();
     _notify();
