@@ -15,6 +15,8 @@ struct _MyApplication {
   GtkWindow* window;
   FlMethodChannel* window_channel;
   gboolean pet_mode;
+  // Última zona de clics que mandó Dart (al inicio, vacía: nada recibe clics).
+  cairo_region_t* input_region;
 };
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
@@ -48,9 +50,16 @@ static void debug_event_handler(GdkEvent* event, gpointer data) {
   gtk_main_do_event(event);
 }
 
-static void set_input_region(GtkWindow* window, FlValue* rects) {
-  GdkWindow* gdk_window = gtk_widget_get_window(GTK_WIDGET(window));
-  if (gdk_window == nullptr) return;
+// Se la damos a GTK a nivel widget (no gdk_window_*): así GTK la respeta cuando
+// él mismo vuelve a poner la forma de la ventana (al crearla y al cambiar de
+// tamaño). Antes, justo después de "realize", GTK la borraba y toda la pantalla
+// recibía clics hasta que Dart mandaba la primera zona.
+static void apply_input_region(MyApplication* self) {
+  if (self->window == nullptr || self->input_region == nullptr) return;
+  gtk_widget_input_shape_combine_region(GTK_WIDGET(self->window), self->input_region);
+}
+
+static void set_input_region(MyApplication* self, FlValue* rects) {
   cairo_region_t* region = cairo_region_create();
   if (rects != nullptr && fl_value_get_type(rects) == FL_VALUE_TYPE_LIST) {
     for (size_t i = 0; i < fl_value_get_length(rects); i++) {
@@ -73,8 +82,9 @@ static void set_input_region(GtkWindow* window, FlValue* rects) {
     }
     if (cairo_region_is_empty(region)) g_printerr("[laika] input region: (vacía)\n");
   }
-  gdk_window_input_shape_combine_region(gdk_window, region, 0, 0);
-  cairo_region_destroy(region);
+  g_clear_pointer(&self->input_region, cairo_region_destroy);
+  self->input_region = region;
+  apply_input_region(self);
 }
 
 static void window_method_cb(FlMethodChannel* channel, FlMethodCall* call, gpointer user_data) {
@@ -82,7 +92,7 @@ static void window_method_cb(FlMethodChannel* channel, FlMethodCall* call, gpoin
   const gchar* method = fl_method_call_get_name(call);
   g_autoptr(FlMethodResponse) response = nullptr;
   if (g_strcmp0(method, "setInputRegion") == 0) {
-    set_input_region(self->window, fl_method_call_get_args(call));
+    set_input_region(self, fl_method_call_get_args(call));
     response = FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool(TRUE)));
   } else if (g_strcmp0(method, "isPetMode") == 0) {
     response = FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool(self->pet_mode)));
@@ -119,9 +129,17 @@ static void setup_pet_window(GtkWindow* window) {
   gtk_widget_set_app_paintable(GTK_WIDGET(window), TRUE);
 }
 
-static void pet_window_realized(GtkWidget* widget, gpointer user_data) {
-  // Hasta que Dart diga dónde está Laika, nada recibe clics.
-  set_input_region(GTK_WINDOW(widget), nullptr);
+// Cuando la pantalla desaparece y vuelve (suspender, apagar el monitor, conectar
+// otro), gtk-layer-shell esconde y vuelve a mostrar la ventana. GTK crea entonces
+// una wl_surface nueva y NO le vuelve a mandar la zona de clics (cree que ya la
+// mandó), así que la capa entera, que cubre la pantalla, se tragaba todos los
+// clics hasta que movías a Laika. Por eso la reaplicamos cada vez que se muestra.
+static void pet_window_mapped(GtkWidget* widget, gpointer user_data) {
+  MyApplication* self = MY_APPLICATION(user_data);
+  static gboolean first = TRUE;
+  if (!first) g_printerr("[laika] la ventana se volvió a mostrar (cambió la pantalla): zona de clics reaplicada\n");
+  first = FALSE;
+  apply_input_region(self);
 }
 
 // Implements GApplication::activate.
@@ -143,7 +161,10 @@ static void my_application_activate(GApplication* application) {
   if (self->pet_mode) {
     if (laika_debug()) gdk_event_handler_set(debug_event_handler, nullptr, nullptr);
     setup_pet_window(window);
-    g_signal_connect(window, "realize", G_CALLBACK(pet_window_realized), nullptr);
+    // Hasta que Dart diga dónde está Laika, nada recibe clics.
+    self->input_region = cairo_region_create();
+    apply_input_region(self);
+    g_signal_connect_after(window, "map", G_CALLBACK(pet_window_mapped), self);
   }
 #ifdef GDK_WINDOWING_X11
   GdkScreen* screen = gtk_window_get_screen(window);
@@ -243,6 +264,7 @@ static void my_application_dispose(GObject* object) {
   MyApplication* self = MY_APPLICATION(object);
   g_clear_pointer(&self->dart_entrypoint_arguments, g_strfreev);
   g_clear_object(&self->window_channel);
+  g_clear_pointer(&self->input_region, cairo_region_destroy);
   G_OBJECT_CLASS(my_application_parent_class)->dispose(object);
 }
 

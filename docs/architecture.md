@@ -113,6 +113,12 @@ laika_app --pet
 
 - Mientras arrastras a Laika, Wayland mantiene el puntero "agarrado", así que
   no se pierde aunque salgas un instante de la región.
+- La zona se guarda en C (`MyApplication.input_region`) y se le da a GTK a nivel
+  widget (`gtk_widget_input_shape_combine_region`), y se **reaplica en cada `map`**:
+  al suspender, la pantalla desaparece y al volver gtk-layer-shell esconde y
+  muestra la ventana; GTK crea una `wl_surface` nueva y no le manda la zona
+  (bug de GTK 3), así que la capa entera se tragaba los clics hasta mover a Laika.
+  Cuando pasa, el journal dice `zona de clics reaplicada`.
 - La caja de texto avisa al servidor que estás escribiendo
   (`PetController.composing`), y deja de avisar al vaciarla o al salir de ella.
 

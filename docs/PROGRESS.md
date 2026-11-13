@@ -1,6 +1,6 @@
 # Progreso — retomar aquí
 
-**Última actualización:** 2026-11-02 · **Estado:** diseño final + modo escritorio `--pet` + cliente real. Falta que Esteban lo pruebe.
+**Última actualización:** 2026-11-13 · **Estado:** diseño final + modo escritorio `--pet` + cliente real. Falta que Esteban lo pruebe.
 
 ## Hecho
 - Proyecto Flutter (Linux + Android). Build de Linux release OK.
@@ -157,3 +157,21 @@
 ### Siguiente
 - Crash de `--app`: Esteban estaba en la **pantalla del gráfico** (mapa de recuerdos), sin hacer nada; no ha vuelto a
   pasar y pidió dejarlo así. Si regresa: empezar por ahí (`coredumpctl list laika_app`).
+
+## 2026-11-13 — después de suspender, la mascota se tragaba los clics
+- Esteban: al volver de suspender, no podía hacer clic en nada hasta mover un poco a Laika.
+- Causa (reproducida en un KWin anidado con 2 pantallas virtuales, quitando y poniendo una):
+  al suspender desaparecen las pantallas; al volver, gtk-layer-shell esconde y vuelve a mostrar la ventana,
+  GTK 3 crea una `wl_surface` nueva y **no** le manda la zona de clics → la capa que cubre la pantalla recibía
+  todos los clics. Al mover a Laika, Dart mandaba una zona nueva y se arreglaba.
+- Arreglo (`linux/runner/my_application.cc`): la zona se guarda y se reaplica en cada `map`; además se da a GTK a
+  nivel widget para que GTK no la borre al crear la ventana. Probado: las 3 superficies (inicio, quitar, poner)
+  reciben la zona de Laika. El journal registra `zona de clics reaplicada` cada vez que pasa.
+- 26 pruebas OK, `flutter analyze` limpio, build release listo.
+- **Falta (Esteban):** instalar y reiniciar la mascota:
+  `tool/install_linux.sh --autostart && systemctl --user restart 'app-laika\x2dpet@autostart.service'`
+  y luego confirmar tras suspender: `journalctl --user -b | grep reaplicada`.
+
+## 2026-11-13 — flashcards editables desde la app
+- Esteban: quiere **editar las flashcards desde la app**. El servidor (cc-server) está planeando las flashcards;
+  cuando termine el plan, esta sesión y la de cc-server acuerdan juntas el contrato (`docs/API.md`) y los cambios.
