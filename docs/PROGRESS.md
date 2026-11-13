@@ -277,4 +277,7 @@
 ### Siguiente
 - Esteban: instalar (mismo comando de arriba) y probar Ajustes → Cerrar Laika.
 - Después: medir la mascota real; subir a GitHub cuando Esteban diga.
+- **Instalado por Esteban** a las 17:46. Medido con `/proc` en la pantalla real (144 Hz): la mascota dormida usa
+  **3.7 %** de un núcleo (antes 19.7 %). Lo que queda es sobre todo redibujar la capa de pantalla completa 10 veces por
+  segundo; bajarlo más pediría menos fps dormida o una ventana del tamaño de Laika (cambio grande).
 
