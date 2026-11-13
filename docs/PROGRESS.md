@@ -238,3 +238,5 @@
   en `repeat()`), también dormida. Esperando el OK de Esteban para revisarlo.
 - cc-server tiene la API de apariencia del chat (P6.4, `GET/PUT /api/appearance`). **Esteban: dejar el chat como está**
   (la app no la sigue por ahora).
+- **Subido a GitHub** (`3424eba..a6f7ffe`, 15 commits) con el OK de Esteban, después de revisar el diff: sin
+  secretos ni la URL del servidor.
