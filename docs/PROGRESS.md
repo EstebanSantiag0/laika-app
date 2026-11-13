@@ -175,3 +175,13 @@
 ## 2026-11-13 — flashcards editables desde la app
 - Esteban: quiere **editar las flashcards desde la app**. El servidor (cc-server) está planeando las flashcards;
   cuando termine el plan, esta sesión y la de cc-server acuerdan juntas el contrato (`docs/API.md`) y los cambios.
+- cc-server mandó el borrador (su `docs/PLAN-phase6.md`, D24): una tarjeta = un hanzi en una lectura, FSRS,
+  `note` solo de Esteban, campos que él edita quedan **bloqueados** (Laika solo sugiere: línea 🃏 con Aplicar / No),
+  `/api/cards` (lista, detalle con historial, crear, editar, papelera, `due`, `review`, deshacer, sugerencias, audio),
+  evento WS `card` y `meta.card` en el chat.
+- Respuesta de la app: aceptado, con cambios: `limit` hasta 500 (todo de una vez), `preview` de FSRS + `now` en
+  `/due`, cada escritura devuelve `edit_id`, reseñas deshacibles e idempotentes (`client_id`), `unlock`, 409 al
+  cambiar a una lectura que ya existe, `counts` por filtro y tope diario de nuevas en el servidor, tarjetas en
+  `/api/trash`, `gloss_es`/`gloss_en`, audio 202 si tarda. Para la mascota solo opciones sin peticiones nuevas
+  (`cards_due` en `/health`, `counts` en el evento); si la mascota muestra algo lo decide Esteban.
+- **Esperando:** el "go" de Esteban (ambos lados) y la versión acordada en el `docs/API.md` del servidor.
