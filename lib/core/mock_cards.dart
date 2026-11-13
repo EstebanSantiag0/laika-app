@@ -30,16 +30,6 @@ const _dict = <String, List<(String, int, String, String, String?)>>{
   '火': [('huǒ', 3, 'fuego', 'fire', '火车')],
 };
 
-/// Tono de un pinyin con marca (háng → 2); sin marca = 5 (neutro).
-int toneOf(String reading) {
-  const marks = ['āēīōūǖ', 'áéíóúǘ', 'ǎěǐǒǔǚ', 'àèìòùǜ'];
-  for (var i = 0; i < marks.length; i++) {
-    if (reading.split('').any(marks[i].contains)) return i + 1;
-  }
-  final digit = RegExp(r'[1-5]$').firstMatch(reading);
-  return digit != null ? int.parse(digit.group(0)!) : 5;
-}
-
 class MockCardStore {
   MockCardStore(DateTime t) {
     _seed(t);

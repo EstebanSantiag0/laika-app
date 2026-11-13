@@ -52,6 +52,10 @@ class DeckController extends ChangeNotifier {
 
   String get _serverFilter => filter == 'check' ? 'all' : filter;
 
+  /// Cuántas hay en "Revisar" (sugerencias de Laika o significado dudoso), si se sabe.
+  int? get toCheck =>
+      _serverFilter == 'all' ? cards.where((c) => c.checkMeaning || c.suggestions.isNotEmpty).length : null;
+
   /// Lo que se ve: el filtro y la búsqueda (pinyin sin tonos, español, inglés, palabra).
   List<Flashcard> get visible {
     final q = query.trim();

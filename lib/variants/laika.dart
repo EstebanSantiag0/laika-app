@@ -7,6 +7,7 @@
 //  • Notas y recordatorios: estilo Brutal (bordes gruesos, sombras duras),
 //    con los colores de Cristal.
 //  • Segundo cerebro: Guardados, Gustos y editar el grafo (laika_saved.dart, laika_edit.dart).
+//  • Tarjetas: hanzi con FSRS, editar, sugerencias de Laika y repaso (laika_cards.dart).
 //  • Mascota: cara-círculo estilo Brutal con 16 emociones (lib/pets/circle_face.dart)
 //    o una skin de imágenes elegida en Ajustes (lib/pets/skins.dart).
 
@@ -17,9 +18,12 @@ import 'dart:math';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../core/api.dart';
 import '../core/brain.dart';
+import '../core/deck.dart';
+import '../core/media.dart';
 import '../core/models.dart';
 import '../core/pet.dart';
 import '../core/second_brain.dart';
@@ -32,6 +36,7 @@ import '../pets/skins.dart';
 
 part 'laika_saved.dart';
 part 'laika_edit.dart';
+part 'laika_cards.dart';
 
 // ── Paleta Cristal ──────────────────────────────────────────────────────────
 const lInk = Color(0xFF3B3355);
@@ -45,8 +50,8 @@ const lPeach = Color(0xFFFFE4E6);
 const _sans = 'Adwaita Sans';
 const _mono = 'Hack';
 
-TextStyle _t(double size, {FontWeight w = FontWeight.w400, Color color = lInk}) =>
-    TextStyle(fontFamily: _sans, fontSize: size, fontWeight: w, color: color, height: 1.35);
+TextStyle _t(double size, {FontWeight w = FontWeight.w400, Color color = lInk}) => TextStyle(
+    fontFamily: _sans, fontFamilyFallback: const ['Noto Sans CJK SC'], fontSize: size, fontWeight: w, color: color, height: 1.35);
 
 TextStyle _m(double size, {FontWeight w = FontWeight.w400, Color color = lInk}) => TextStyle(
     fontFamily: _mono, fontFamilyFallback: const ['Liberation Mono', 'monospace'], fontSize: size, fontWeight: w, color: color, height: 1.4);
@@ -380,6 +385,7 @@ class _LaikaAppState extends State<LaikaApp> {
         ('Cerebro', () => LaikaBrain(brain: widget.session.brain)),
         ('Guardados', () => LaikaSaved(saved: widget.session.saved, areas: widget.session.brain.graph?.areas ?? const [])),
         ('Gustos', () => LaikaLikes(saved: widget.session.saved)),
+        ('Tarjetas', () => LaikaCards(deck: widget.session.deck)),
         ('Agenda', () => LaikaAgenda(rem: widget.session.reminders)),
         ('Emociones', () => const MoodSheet()),
         ('Ajustes', () => const LaikaSettings()),

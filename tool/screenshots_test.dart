@@ -28,6 +28,8 @@ const _fonts = {
   ],
   'Hack': ['/usr/share/fonts/TTF/Hack-Regular.ttf', '/usr/share/fonts/TTF/Hack-Bold.ttf'],
   'Liberation Sans': ['/usr/share/fonts/liberation/LiberationSans-Regular.ttf'],
+  // Hanzi de las tarjetas (colección .ttc: Flutter usa su primera cara).
+  'Noto Sans CJK SC': ['/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc', '/usr/share/fonts/noto-cjk/NotoSansCJK-Bold.ttc'],
 };
 
 Future<void> _loadFonts() async {
@@ -133,6 +135,38 @@ void main() {
     await tester.tap(find.text('Editar').first);
     await settle();
     await expectLater(find.byType(VariantHost), matchesGoldenFile('../docs/screenshots/laika-8-editar.png'));
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('capturas: tarjetas (lista, una tarjeta, repaso)', (tester) async {
+    tester.view.physicalSize = const Size(1280, 980);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(LaikaPrototypes(initial: 'laika'));
+    await tester.pump();
+    Future<void> settle() async {
+      for (var i = 0; i < 4; i++) {
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+    }
+
+    await tester.tap(find.text('Tarjetas').first);
+    await settle();
+    await expectLater(find.byType(VariantHost), matchesGoldenFile('../docs/screenshots/laika-9-tarjetas.png'));
+
+    await tester.tap(find.text('行').first);
+    await settle();
+    await expectLater(find.byType(VariantHost), matchesGoldenFile('../docs/screenshots/laika-10-tarjeta.png'));
+    await tester.tap(find.byIcon(Icons.close_rounded).first);
+    await settle();
+
+    await tester.tap(find.textContaining('Repasar · '));
+    await settle();
+    await tester.tap(find.text('Mostrar (espacio)'));
+    await settle();
+    await expectLater(find.byType(VariantHost), matchesGoldenFile('../docs/screenshots/laika-11-repaso.png'));
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));

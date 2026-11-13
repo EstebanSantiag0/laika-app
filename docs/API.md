@@ -134,3 +134,37 @@ Desde la caja de la mascota:
 
 Errores: `{error, field?, max_mb?, node_id?}` → `LaikaApiError` (404, 409 conflicto, 413 archivo grande, 422 campo).
 `base_updated_at` se compara como instante (cualquier zona horaria); si no es una fecha → 422 `field=base_updated_at`.
+
+## Tarjetas (acordado con cc-server el 2026-11-13; aún no en vivo)
+
+Plan del servidor: `docs/PLAN-phase6.md` ("API agreed with the laika-app session"). Mientras el servidor no las
+tenga, la app las usa con el servidor simulado (`lib/core/mock_cards.dart`). **Solo la app**: la mascota ignora
+el evento `card` y las líneas 🃏 del chat (decisión de Esteban).
+
+Una tarjeta = un carácter chino en una lectura (`kind: "hanzi"`), agendada con FSRS (py-fsrs). Reglas:
+- `note` es solo de Esteban; Laika nunca la escribe.
+- Lo que Esteban manda en PATCH queda en `locked`: Laika ya no lo cambia, solo lo **sugiere** (Edit `op: "suggest"`,
+  `status: pending|applied|dismissed`, `after` = lo propuesto; `{"deleted": true}` = propone borrarla).
+- Toda escritura devuelve `{card, edit_id}` (para "Deshacer").
+
+| Endpoint | En la app |
+|---|---|
+| `GET /api/cards?filter=all\|due\|new\|his\|hers\|hard\|trash&q=&before=&limit=` (≤ 500) | `cards()` → `CardPage` (`cards`, `next_before`, `counts`). La app pide todo de una vez y busca aquí |
+| `GET /api/cards/{id}` → `{card, history: [Edit]}` | `card()` |
+| `POST /api/cards {front, reading?, word?, meaning_es?, meaning_en?, note?}` | `createCard()`; el servidor llena lo que falta. 409 `{error, card_id}` si ya existe (si estaba en la papelera, vuelve) |
+| `PATCH /api/cards/{id} {campos de editable, base_updated_at?, unlock?: [campos]}` | `patchCard()`; 409 si cambió o si la lectura ya existe (`card_id`); 422 lectura que el carácter no tiene. Cambiar la lectura conserva la agenda |
+| `DELETE /api/cards/{id}`, `POST …/restore` | `deleteCard()`, `restoreCard()` (papelera de 30 días) |
+| `GET /api/cards/due?limit=` → `{cards (con preview 1–4), now, counts}` | `dueCards()`: repasos + nuevas hasta `cards.new_per_day` (10) |
+| `POST /api/cards/{id}/review {rating 1–4, client_id, duration_ms?, reviewed_at?}` | `reviewCard()`; idempotente por `client_id`; el repaso es un Edit `op: "review"` (se deshace) |
+| `POST /api/cards/edits/{id}/undo` | `undoCardEdit()`; 409 si un cambio posterior tocó lo mismo |
+| `POST /api/cards/suggestions/{id} {apply}` | `answerSuggestion()` (Aplicar / No) |
+| `GET /api/cards/edits?who=&op=&pending=true&before=&limit=` | `cardEdits()` → `CardEditPage`; cada Edit trae `card: {id, front, reading, word}` |
+| `GET /api/cards/{id}/audio` (ogg/opus; 202 `{retry_after}` si se está generando) | `cardAudio()` → archivo temporal; se oye con `pw-play` (o `ffplay`) |
+| `GET /api/trash` | `Trash.cards` |
+| `{"type":"card", op, who, card, edit_id?, counts}` por `/ws` | `CardEvent` (solo la pestaña Tarjetas) |
+
+`Card`: `id, kind, front, word, reading, tone (1–5), meaning_es, meaning_en, note, known_words [{word, reading,
+gloss_es, gloss_en}], parts, audio, source (him|laika|book:<id>), created_by, updated_by, created_at, updated_at,
+locked, suspended, deleted_at, editable, schedule {due_at, state new|learning|review|relearning, stability,
+difficulty, last_review_at}, suggestions [edit ids pendientes], flags (["check_meaning"])` y, solo en `/due`,
+`preview {"1".."4": due_at}`. `counts`: `total, due, new, learning, suspended, trash, new_left_today, suggestions`.

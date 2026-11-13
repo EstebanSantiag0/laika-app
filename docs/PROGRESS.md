@@ -195,3 +195,25 @@
   `meta.card` (las líneas 🃏 de Deshacer / Aplicar / No salen solo en el chat de la app).
 - **Esperando:** el "go" de Esteban. Luego: modelos + backend simulado → pestaña Tarjetas → HttpLaika → prueba en vivo
   cuando cc-server avise que está en su `docs/API.md` y en vivo.
+
+## 2026-11-13 (tarde) — pestaña Tarjetas en la app
+- Esteban: "go ahead" → se instaló el arreglo de la mascota (12:15, journal limpio) y se empezó la app de tarjetas.
+- cc-server aceptó también el **feed de cambios** (`GET /api/cards/edits`, `Edit.status`/`undoable`,
+  `counts.suggestions`, `Card.suggestions`) y agregó `Card.flags` (`check_meaning`). Esteban le dio el go al servidor:
+  lo está construyendo. Contrato completo en `docs/API.md` → "Tarjetas".
+- Hecho (contra el servidor simulado):
+  - `core/cards.dart` (modelos), `core/mock_cards.dart` (bloqueos, sugerencias, deshacer, repasos idempotentes,
+    tope diario de nuevas, agenda tipo FSRS), `core/deck.dart` (`DeckController`, `ReviewSession`),
+    `HttpLaika` con todos los endpoints y el evento `card`, `Media.play` (pw-play / ffplay).
+  - Pestaña **Tarjetas** (`variants/laika_cards.dart`): Repasar con conteos, caja "Laika" (Aplicar / No, Deshacer),
+    agregar con solo el carácter, búsqueda (pinyin sin tonos, español, inglés), filtros, tarjetas con el color del tono;
+    editor con 🔒 y "Devolver a Laika", historial con Deshacer; repaso con 4 botones y vista previa (espacio, 1–4, U).
+  - La mascota ignora `CardEvent` (prueba incluida). El texto normal ahora cae a Noto Sans CJK si hay chino.
+- 42 pruebas OK (12 de contrato/simulador + 4 de la pestaña), `flutter analyze` limpio.
+  Capturas nuevas: `laika-9-tarjetas.png`, `laika-10-tarjeta.png`, `laika-11-repaso.png`.
+
+### Siguiente
+- Cuando cc-server avise que está en vivo: prueba conjunta con tarjetas "PRUEBA" (como SB8) que terminen en la papelera.
+- Esteban: probar la pestaña (`laika_app --app` → Tarjetas). Con el servidor real configurado dirá "El servidor
+  todavía no tiene tarjetas" hasta que cc-server las publique; para verla ya: `XDG_CONFIG_HOME=$(mktemp -d) laika_app --app`
+  (sin servidor = simulado).

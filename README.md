@@ -27,6 +27,16 @@ tamaño y el servidor.
 
 ![Emociones de Laika](docs/screenshots/laika-4-emociones.png)
 
+**Tarjetas** (solo en la app, no en la mascota): hanzi con su lectura, agendados con FSRS. Escribes un carácter
+y Laika llena el pinyin y el significado; lo que tú corriges queda como **tuyo** (🔒) y Laika ya no lo cambia,
+solo te lo **sugiere** (Aplicar / No). Todo se puede deshacer. El repaso muestra el carácter dentro de una
+palabra, el pinyin con el color de su tono y 4 botones con cuándo vuelve cada uno (teclado: espacio, 1–4, U).
+Mientras el servidor las termina, funcionan con el servidor simulado.
+
+| Tarjetas | Una tarjeta | Repaso |
+|---|---|---|
+| ![Tarjetas](docs/screenshots/laika-9-tarjetas.png) | ![Una tarjeta](docs/screenshots/laika-10-tarjeta.png) | ![Repaso](docs/screenshots/laika-11-repaso.png) |
+
 Los 5 prototipos con los que se eligió el estilo siguen en la galería:
 
 | Cosmos | Papel | Pixel | Brutal | Cristal |
@@ -216,7 +226,7 @@ tiempo (Cristal).
 
 ```bash
 flutter analyze        # revisa el código
-flutter test           # 15 pruebas: despertar, burbujas a su lado, dormirse, servidor caído...
+flutter test           # 42 pruebas: despertar, burbujas a su lado, dormirse, servidor caído, tarjetas...
 ```
 
 Las capturas de `docs/screenshots/` se generan con las fuentes de tu sistema:
@@ -232,6 +242,10 @@ lib/
 ├── main.dart              --pet / --app / galería de diseños
 ├── core/                  lógica compartida (igual en todos los diseños)
 │   ├── models.dart        datos: nodos, áreas, recordatorios (contrato de la API)
+│   ├── cards.dart         tarjetas: hanzi, agenda FSRS, cambios y sugerencias de Laika
+│   ├── deck.dart          estado de la pestaña Tarjetas y del repaso
+│   ├── mock_cards.dart    tarjetas del servidor simulado
+│   ├── media.dart         voz, capturas, archivos y audio (Linux)
 │   ├── api.dart           interfaz con el servidor
 │   ├── http_laika.dart    cliente real (HTTPS + WebSocket)
 │   ├── config.dart        ajustes en ~/.config/laika/config.json
@@ -252,6 +266,7 @@ lib/
 │   └── skins.dart         skins de imágenes (~/.config/laika/skins, ./skins)
 └── variants/              diseños: laika.dart (el elegido) + los 5 prototipos
     ├── laika.dart  cosmos.dart  papel.dart  pixel.dart  brutal.dart  cristal.dart
+    ├── laika_saved.dart  laika_edit.dart  laika_cards.dart   pantallas del diseño Laika
     └── variants.dart      lista de diseños
 linux/runner/my_application.cc   ventana nativa; modo --pet con gtk-layer-shell
 tool/install_linux.sh            instalar para tu usuario
@@ -266,9 +281,10 @@ Contrato con el servidor: [`docs/API.md`](docs/API.md).
 1. ✅ Elegir diseño (mezcla final en `lib/variants/laika.dart`).
 2. ✅ `HttpLaika`: cliente real (HTTPS + WebSocket por Tailscale).
 3. ✅ Linux: Laika sobre tu escritorio real (`--pet`, `gtk-layer-shell`).
-4. Recordar dónde dejaste a Laika en la pantalla.
-5. Android: burbuja flotante sobre otras apps y notificaciones de recordatorios.
-6. Animaciones finales y alimentar a Laika arrastrándole PDFs o enlaces.
+4. Tarjetas: ✅ en la app (con el servidor simulado); falta conectarlas cuando el servidor las tenga en vivo.
+5. Recordar dónde dejaste a Laika en la pantalla.
+6. Android: burbuja flotante sobre otras apps y notificaciones de recordatorios.
+7. Animaciones finales y alimentar a Laika arrastrándole PDFs o enlaces.
 
 El avance día a día está en [`docs/PROGRESS.md`](docs/PROGRESS.md).
 
@@ -293,5 +309,5 @@ El avance día a día está en [`docs/PROGRESS.md`](docs/PROGRESS.md).
 
 - **Idea, diseño del producto, reglas de comportamiento y dirección del proyecto:**
   Esteban Santiago ([@EstebanSantiag0](https://github.com/EstebanSantiag0)).
-- **Código (prototipos, mascotas, cliente y modo escritorio) y documentación:** escritos con ayuda de Claude
+- **Código (prototipos, mascotas, cliente, modo escritorio y tarjetas) y documentación:** escritos con ayuda de Claude
   (IA de Anthropic), siguiendo las decisiones y revisiones de Esteban.

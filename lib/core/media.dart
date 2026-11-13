@@ -42,6 +42,23 @@ class Media {
     return f.existsSync() && f.lengthSync() > 0 ? out : null;
   }
 
+  /// Reproduce un audio (el ogg/opus de una tarjeta) con PipeWire; si no se
+  /// puede, con ffplay (ffmpeg).
+  Future<void> play(String path) async {
+    for (final (cmd, args) in [
+      ('pw-play', [path]),
+      ('ffplay', ['-nodisp', '-autoexit', '-loglevel', 'quiet', path]),
+    ]) {
+      try {
+        final r = await Process.run(cmd, args);
+        if (r.exitCode == 0) return;
+      } on ProcessException {
+        continue;
+      }
+    }
+    throw const MediaError('No pude reproducir el audio (hace falta pw-play o ffplay).');
+  }
+
   static String _stamp() {
     final n = DateTime.now();
     String two(int v) => v.toString().padLeft(2, '0');
