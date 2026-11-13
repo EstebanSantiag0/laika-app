@@ -231,6 +231,10 @@
 - **Arreglado:** cada doble clic (abrir `--app` con `Process.start(..., detached)`) dejaba un proceso `<defunct>` hijo
   de la mascota. Ahora se lanza como hijo normal (`inheritStdio`) y la mascota espera su `exitCode`
   (`desktop/pet_overlay.dart`). Comprobado con un script: `detached` deja 1 zombi por lanzamiento, así 0.
-  Falta instalarlo (reiniciar la mascota también cierra la ventana `--app` abierta).
+  Instalado por Esteban a las 16:37: sin `<defunct>`.
+- **CPU (sin resolver, avisado a Esteban):** la mascota sola usa ~16 % de un núcleo todo el tiempo (medido 8 s,
+  16:37). Con la ventana `--app` abierta de 12:38 a 16:37, el servicio gastó 3 h 10 min de CPU en 4 h (~80 %): la
+  app se come ~60 % aunque no la mires. Sospecha: animaciones que nunca paran (fondo Aurora, `AnimationController`
+  en `repeat()`), también dormida. Esperando el OK de Esteban para revisarlo.
 - cc-server tiene la API de apariencia del chat (P6.4, `GET/PUT /api/appearance`). **Esteban: dejar el chat como está**
   (la app no la sigue por ahora).
