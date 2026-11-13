@@ -135,10 +135,10 @@ Desde la caja de la mascota:
 Errores: `{error, field?, max_mb?, node_id?}` → `LaikaApiError` (404, 409 conflicto, 413 archivo grande, 422 campo).
 `base_updated_at` se compara como instante (cualquier zona horaria); si no es una fecha → 422 `field=base_updated_at`.
 
-## Tarjetas (acordado con cc-server el 2026-11-13; aún no en vivo)
+## Tarjetas (acordado con cc-server el 2026-11-13; en vivo desde las 12:31)
 
-Plan del servidor: `docs/PLAN-phase6.md` ("API agreed with the laika-app session"). Mientras el servidor no las
-tenga, la app las usa con el servidor simulado (`lib/core/mock_cards.dart`). **Solo la app**: la mascota ignora
+Fuente de verdad: `docs/API.md` → "Flashcards" del servidor. Probado con `tool/cards_live_test.dart` (fase 1: 11/11).
+Sin servidor configurado, la app usa el simulado (`lib/core/mock_cards.dart`). **Solo la app**: la mascota ignora
 el evento `card` y las líneas 🃏 del chat (decisión de Esteban).
 
 Una tarjeta = un carácter chino en una lectura (`kind: "hanzi"`), agendada con FSRS (py-fsrs). Reglas:
@@ -168,3 +168,10 @@ gloss_es, gloss_en}], parts, audio, source (him|laika|book:<id>), created_by, up
 locked, suspended, deleted_at, editable, schedule {due_at, state new|learning|review|relearning, stability,
 difficulty, last_review_at}, suggestions [edit ids pendientes], flags (["check_meaning"])` y, solo en `/due`,
 `preview {"1".."4": due_at}`. `counts`: `total, due, new, learning, suspended, trash, new_left_today, suggestions`.
+
+Detalles del servidor en vivo: `POST /api/cards` siempre contesta 201 (también si recuperó una de la papelera) y
+puede tardar unos segundos (el modelo escribe los significados; la app espera hasta 90 s). `reading` acepta "háng"
+o "hang2". `note` nunca se bloquea. Un PATCH sin cambios → `edit_id: null`. Deshacer una edición también quita su
+bloqueo. El repaso es un Edit con `after = {fsrs, rating}`; `client_id` es obligatorio (422 sin él). Todos los 409
+traen `card_id`. Las líneas del chat empiezan con 🃏 (nunca 📚, así la mascota no las muestra). Una sugerencia
+nueva llega por el WS como `op: "edited"` con el `edit_id` de la sugerencia.

@@ -217,3 +217,11 @@
 - Esteban: probar la pestaña (`laika_app --app` → Tarjetas). Con el servidor real configurado dirá "El servidor
   todavía no tiene tarjetas" hasta que cc-server las publique; para verla ya: `XDG_CONFIG_HOME=$(mktemp -d) laika_app --app`
   (sin servidor = simulado).
+
+## 2026-11-13 (tarde, 2) — tarjetas en vivo con cc-server
+- cc-server publicó `/api/cards` (12:31). `tool/cards_live_test.dart` fase 1: **11/11** contra el servidor real
+  (solo 鼋 鼍 夔 鞘 con nota "PRUEBA"; ids 1–4 en la papelera, se purgan solos a los 30 días).
+- Fase 2 (sugerencias de Laika): 鼍 id=5 con `meaning_es` bloqueado; cc-server hace que Laika sugiera otro significado
+  y borrarla; luego `LAIKA_CARD=5 flutter test tool/cards_live_test.dart` (Aplicar, 409 al repetir, deshacer, No).
+- Para ver la pestaña en la app instalada hay que reinstalar (también reinicia la mascota):
+  `flutter build linux --release --no-tree-shake-icons && tool/install_linux.sh --autostart && systemctl --user restart 'app-laika\x2dpet@autostart.service'`.
