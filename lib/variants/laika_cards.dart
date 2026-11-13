@@ -446,7 +446,7 @@ class _CardDialogState extends State<_CardDialog> {
         });
       }
     } on LaikaApiError catch (e) {
-      if (e.status == 409 && e.cardId == c.id) {
+      if (e.status == 409 && (e.cardId == null || e.cardId == c.id)) {
         await _load(error: 'Cambió mientras la editabas (¿Laika?). Ya se recargó: revisa y guarda otra vez.');
       } else if (e.status == 409 && e.cardId != null) {
         setState(() => _error = 'Esa lectura ya está en otra tarjeta (${e.cardId}).');

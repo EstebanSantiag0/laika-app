@@ -330,10 +330,10 @@ class CardEdit {
   bool get pending => isSuggestion && status == 'pending';
   bool get proposesDeletion => isSuggestion && after['deleted'] == true;
 
-  /// Campos que tocó (sin la agenda de un repaso).
+  /// Campos que tocó (sin la agenda de un repaso: el servidor manda {fsrs, rating}).
   List<String> get fields => [
         for (final k in {...before.keys, ...after.keys})
-          if (k != 'schedule' && k != 'deleted') k,
+          if (!const {'schedule', 'fsrs', 'rating', 'deleted'}.contains(k)) k,
       ];
 
   static const opLabels = {

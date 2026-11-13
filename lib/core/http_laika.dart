@@ -329,7 +329,8 @@ class HttpLaika implements LaikaApi {
   @override
   Future<CardWrite> createCard(
           {required String front, String? reading, String? word, String? meaningEs, String? meaningEn, String? note}) async =>
-      _cardWrite(await _request('POST', '/api/cards', body: {
+      // Puede tardar: el modelo escribe los significados que falten.
+      _cardWrite(await _request('POST', '/api/cards', timeout: const Duration(seconds: 90), body: {
         'front': front,
         'reading': ?reading,
         'word': ?word,
