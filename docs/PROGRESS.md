@@ -191,6 +191,7 @@
   `unlock`; cambiar la lectura conserva el calendario; `gloss_es`/`gloss_en`; audio ogg/opus o 202 `{retry_after}`;
   `/api/trash` trae `cards`; el evento `card` trae `counts`.
 - **Esteban (vía cc-server): las tarjetas van solo en la app, no en la mascota.** Sin `cards_due` en `/health`; la
-  mascota no muestra nada de tarjetas (ignora los eventos `card`).
+  mascota no muestra nada de tarjetas: ignora los eventos `card` y **no** saca como burbuja los mensajes con
+  `meta.card` (las líneas 🃏 de Deshacer / Aplicar / No salen solo en el chat de la app).
 - **Esperando:** el "go" de Esteban. Luego: modelos + backend simulado → pestaña Tarjetas → HttpLaika → prueba en vivo
   cuando cc-server avise que está en su `docs/API.md` y en vivo.
