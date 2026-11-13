@@ -151,7 +151,10 @@ Con `--pet` la ventana es una capa transparente que cubre la pantalla, pero
 - **1 clic:** abre la caja para escribirle. **2 clics:** abre la app completa en una ventana normal.
 - Arrástrala a donde quieras; sus mensajes salen del lado con más espacio.
 - **Cerrarla** (por ejemplo, de viaje): en la app, **Ajustes → Cerrar Laika** cierra la mascota y la ventana.
-  Vuelve sola al iniciar sesión, o ábrela desde el menú: «Laika (mascota)».
+  Vuelve sola al iniciar sesión, o ábrela desde el menú: «Laika (mascota)». Para todo el viaje, marca
+  **No abrir Laika al iniciar sesión** (y desmárcala al regresar).
+
+  ![Ajustes: Cerrar Laika](docs/screenshots/laika-12-ajustes.png)
 - Si algo sale mal: `pkill laika_app`.
 - Batería: dormida, Laika se dibuja 10 veces por segundo (despierta, 30) en vez de en cada refresco de la
   pantalla, y el fondo de la app y la esfera del cerebro se quedan quietos si la ventana no está al frente.
@@ -230,7 +233,7 @@ tiempo (Cristal).
 
 ```bash
 flutter analyze        # revisa el código
-flutter test           # 47 pruebas: despertar, burbujas a su lado, dormirse, servidor caído, tarjetas...
+flutter test           # 50 pruebas: despertar, burbujas a su lado, dormirse, servidor caído, tarjetas...
 ```
 
 Las capturas de `docs/screenshots/` se generan con las fuentes de tu sistema:
@@ -266,6 +269,7 @@ lib/
 ├── desktop/               Laika sobre el escritorio real (Linux)
 │   ├── pet_overlay.dart   la capa transparente
 │   ├── quit.dart          Ajustes → Cerrar Laika (mascota + app)
+│   ├── autostart.dart     «No abrir Laika al iniciar sesión» (Hidden=true)
 │   └── window_bridge.dart qué zonas reciben clics (canal con linux/runner)
 ├── pets/
 │   ├── circle_face.dart   la cara-círculo por defecto: 16 emociones y 2 formas de dormir

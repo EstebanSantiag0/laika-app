@@ -32,6 +32,7 @@ import '../core/session.dart';
 import '../core/sphere_view.dart';
 import '../core/stage.dart';
 import '../core/widgets.dart';
+import '../desktop/autostart.dart';
 import '../core/config.dart';
 import '../pets/skins.dart';
 
@@ -362,12 +363,16 @@ class LaikaSkin extends PetSkin {
 // ── La app (doble clic sobre Laika) ─────────────────────────────────────────
 
 class LaikaApp extends StatefulWidget {
-  const LaikaApp({super.key, required this.session, this.showDesktop = true, this.initialTab = 0, this.onQuit});
+  const LaikaApp(
+      {super.key, required this.session, this.showDesktop = true, this.initialTab = 0, this.onQuit, this.autostart});
   final LaikaSession session;
 
   /// Ajustes → «Cerrar Laika»: cierra la mascota y la app (solo en el
   /// escritorio real; en los prototipos y las pruebas no aparece).
   final Future<void> Function()? onQuit;
+
+  /// Junto al botón: «No abrir Laika al iniciar sesión» (null = no aparece).
+  final Autostart? autostart;
 
   /// En los prototipos se muestra también el escritorio simulado. En la app
   /// real (ventana normal) Laika ya está en tu escritorio de verdad.
@@ -397,7 +402,7 @@ class _LaikaAppState extends State<LaikaApp> {
         ('Tarjetas', () => LaikaCards(deck: widget.session.deck)),
         ('Agenda', () => LaikaAgenda(rem: widget.session.reminders)),
         ('Emociones', () => const MoodSheet()),
-        ('Ajustes', () => LaikaSettings(onQuit: widget.onQuit)),
+        ('Ajustes', () => LaikaSettings(onQuit: widget.onQuit, autostart: widget.autostart)),
       ];
 
   @override
@@ -752,8 +757,9 @@ class _MoodSheetState extends State<MoodSheet> {
 /// Skin, tamaño de Laika y servidor. Se guarda en ~/.config/laika/config.json;
 /// la mascota del escritorio (--pet) lo nota al instante.
 class LaikaSettings extends StatefulWidget {
-  const LaikaSettings({super.key, this.onQuit});
+  const LaikaSettings({super.key, this.onQuit, this.autostart});
   final Future<void> Function()? onQuit;
+  final Autostart? autostart;
   @override
   State<LaikaSettings> createState() => _LaikaSettingsState();
 }
@@ -763,6 +769,7 @@ class _LaikaSettingsState extends State<LaikaSettings> {
   late final _server = TextEditingController(text: config.value.server ?? '');
   List<PetSkinLook> _skins = availableSkins();
   String? _saved;
+  late bool _noLogin = !(widget.autostart?.enabled ?? true);
 
   @override
   void dispose() {
@@ -887,23 +894,51 @@ class _LaikaSettingsState extends State<LaikaSettings> {
           if (widget.onQuit != null)
             _section(
               'Cerrar Laika',
-              'Cierra la mascota del escritorio y esta ventana (por ejemplo, de viaje). Vuelve sola al iniciar '
-                  'sesión, o ábrela desde el menú: «Laika (mascota)».',
-              Align(
-                alignment: Alignment.centerLeft,
-                child: GestureDetector(
+              _noLogin
+                  ? 'Cierra la mascota del escritorio y esta ventana. Con la casilla marcada no vuelve al iniciar '
+                      'sesión: ábrela desde el menú, «Laika (mascota)», y desmárcala cuando regreses.'
+                  : 'Cierra la mascota del escritorio y esta ventana (por ejemplo, de viaje). Vuelve sola al iniciar '
+                      'sesión, o ábrela desde el menú: «Laika (mascota)».',
+              Wrap(spacing: 20, runSpacing: 12, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                GestureDetector(
                   onTap: _confirmQuit,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     decoration: brutalBox(lPink, shadow: 3, border: 2),
-                    child: Text('⏻  Cerrar Laika', style: _t(14, w: FontWeight.w800)),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.power_settings_new_rounded, size: 18, color: lInk),
+                      const SizedBox(width: 6),
+                      Text('Cerrar Laika', style: _t(14, w: FontWeight.w800)),
+                    ]),
                   ),
                 ),
-              ),
+                if (widget.autostart != null)
+                  InkWell(
+                    onTap: () => _setNoLogin(!_noLogin),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Checkbox(value: _noLogin, activeColor: lAccent, onChanged: (v) => _setNoLogin(v ?? false)),
+                      Text('No abrir Laika al iniciar sesión', style: _t(14, w: FontWeight.w600)),
+                    ]),
+                  ),
+              ]),
             ),
         ],
       ),
     );
+  }
+
+  Future<void> _setNoLogin(bool v) async {
+    try {
+      await widget.autostart!.setEnabled(!v);
+      if (mounted) {
+        setState(() {
+          _noLogin = v;
+          _saved = v ? 'Ya no se abrirá al iniciar sesión ✓' : 'Se abrirá al iniciar sesión ✓';
+        });
+      }
+    } on FileSystemException catch (e) {
+      if (mounted) setState(() => _saved = '⚠️ No se pudo cambiar el inicio automático: ${e.message}');
+    }
   }
 
   Future<void> _confirmQuit() async {

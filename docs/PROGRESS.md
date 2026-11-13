@@ -263,3 +263,18 @@
 - Esteban: instalar y reiniciar la mascota (también cierra la app si está abierta):
   `tool/install_linux.sh --autostart && systemctl --user restart 'app-laika\x2dpet@autostart.service'`
 - Después: medir la mascota real con `/proc` (antes ~20 %).
+
+## 2026-11-13 (tarde, 4) — modo viaje: no abrirla al iniciar sesión
+- Esteban: "yes, it'll be nice" (la casilla para que no vuelva al reiniciar durante el viaje).
+- **Ajustes → Cerrar Laika → «No abrir Laika al iniciar sesión»** (`desktop/autostart.dart`): pone `Hidden=true` en
+  `~/.config/autostart/laika-pet.desktop` (como Plasma); desmarcarla lo quita. Comprobado con
+  `systemd-xdg-autostart-generator` en una carpeta temporal: con `Hidden=true` ya no crea el servicio.
+- `tool/install_linux.sh --autostart` respeta la casilla al reinstalar (probado con un HOME temporal).
+- Capturas: `laika-12-ajustes.png`. `tool/screenshots_test.dart` ahora usa ajustes temporales (si no, Ajustes saldría
+  con el servidor real). El símbolo ⏻ salía como cuadrito: ahora es un ícono de Material.
+- 50 pruebas OK, `flutter analyze` limpio.
+
+### Siguiente
+- Esteban: instalar (mismo comando de arriba) y probar Ajustes → Cerrar Laika.
+- Después: medir la mascota real; subir a GitHub cuando Esteban diga.
+

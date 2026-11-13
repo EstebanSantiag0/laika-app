@@ -126,6 +126,13 @@ laika_app --pet
   proceso), les manda SIGTERM y cierra la app con `System.exitApplication`. El
   servicio de inicio de sesión tiene `Restart=no`, así que no vuelve hasta el
   próximo inicio de sesión o el lanzador «Laika (mascota)».
+- **No abrir Laika al iniciar sesión** (casilla junto al botón, `desktop/autostart.dart`):
+  agrega `Hidden=true` a `~/.config/autostart/laika-pet.desktop`, igual que
+  Plasma en Preferencias → Inicio automático; con eso
+  `systemd-xdg-autostart-generator` ya no crea `app-laika\x2dpet@autostart.service`
+  (comprobado con el generador en una carpeta temporal). Desmarcarla quita la
+  línea; si el archivo no existe, lo crea con este ejecutable.
+  `tool/install_linux.sh --autostart` conserva esa línea al reinstalar.
 
 ### Batería: animaciones sin fin (`core/pace.dart`)
 
@@ -176,5 +183,8 @@ calculan desde "ahora" para que la agenda siempre se vea con "hoy/mañana".
   comprobar el lado de las burbujas, dormirse a los 15 s, servidor caído, y
   dibujar Cerebro y Agenda sin errores. Más: lado izquierdo y recordatorio al despertar.
 - `test/battery_quit_test.dart`: `Pace` (ritmo, pausa, sin foco), encontrar las
-  mascotas en `/proc`, y el botón Cerrar Laika (pregunta antes; no sale en los prototipos).
+  mascotas en `/proc`, el botón Cerrar Laika (pregunta antes; no sale en los
+  prototipos) y la casilla del inicio automático (apagar y prender deja el archivo igual).
+- `tool/screenshots_test.dart` usa una carpeta de ajustes temporal: Ajustes
+  mostraría el servidor real y las skins personales, y las capturas son públicas.
 - `tool/screenshots_test.dart`: genera `docs/screenshots/` con fuentes reales.

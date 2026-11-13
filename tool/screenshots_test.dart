@@ -10,8 +10,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:laika_app/core/config.dart';
 import 'package:laika_app/core/session.dart';
 import 'package:laika_app/core/stage.dart';
+import 'package:laika_app/desktop/autostart.dart';
 import 'package:laika_app/main.dart';
 import 'package:laika_app/variants/laika.dart';
 import 'package:laika_app/variants/variants.dart';
@@ -57,6 +59,9 @@ final _tabs = <String, (Finder, Finder)>{
 };
 
 void main() {
+  // Ajustes de mentira: el repo es público y Ajustes mostraría el servidor real
+  // (y las skins personales de ~/.config/laika/skins).
+  LaikaConfig.dirForTests = Directory.systemTemp.createTempSync('laika_shots_config_').path;
   setUpAll(_loadFonts);
 
   for (final v in allVariants) {
@@ -170,6 +175,27 @@ void main() {
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('capturas: ajustes (Cerrar Laika, modo viaje)', (tester) async {
+    tester.view.physicalSize = const Size(1280, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final dir = Directory.systemTemp.createTempSync('laika_shots_autostart_');
+    final auto = '${dir.path}/laika-pet.desktop';
+    File(auto).writeAsStringSync('${Autostart.entryFor('/x/laika_app').join('\n')}\n');
+    await tester.runAsync(() => Autostart(auto).setEnabled(false)); // la casilla marcada (archivo real: fuera del reloj falso)
+    final session = LaikaSession(null);
+    await tester.pumpWidget(LaikaApp(session: session, showDesktop: false, onQuit: () async {}, autostart: Autostart(auto)));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.text('Ajustes').first);
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+    await expectLater(find.byType(LaikaApp), matchesGoldenFile('../docs/screenshots/laika-12-ajustes.png'));
+    await tester.pumpWidget(const SizedBox());
+    session.dispose();
+    await tester.pump(const Duration(seconds: 10));
   });
 
   testWidgets('capturas: emociones de Laika', (tester) async {

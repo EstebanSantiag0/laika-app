@@ -53,8 +53,16 @@ desktop "Laika (mascota)" "--pet" "Laika sobre tu escritorio" > "$APPS/laika-pet
 
 if [[ "${1:-}" == "--autostart" ]]; then
   mkdir -p "$AUTO"
+  # Si la apagaste en la app (Ajustes → «No abrir Laika al iniciar sesión»), se respeta.
+  hidden=""
+  grep -qx "Hidden=true" "$AUTO/laika-pet.desktop" 2>/dev/null && hidden=1
   desktop "Laika (mascota)" "--pet" "Laika sobre tu escritorio" > "$AUTO/laika-pet.desktop"
-  echo "La mascota arrancará al iniciar sesión."
+  if [[ -n "$hidden" ]]; then
+    sed -i 's/^\[Desktop Entry\]$/&\nHidden=true/' "$AUTO/laika-pet.desktop"
+    echo "La mascota sigue sin abrirse al iniciar sesión (lo apagaste en Ajustes de la app)."
+  else
+    echo "La mascota arrancará al iniciar sesión."
+  fi
 fi
 
 [[ -f "$HOME/.config/laika/config.json" ]] || cat <<'EOM'
