@@ -184,4 +184,12 @@
   cambiar a una lectura que ya existe, `counts` por filtro y tope diario de nuevas en el servidor, tarjetas en
   `/api/trash`, `gloss_es`/`gloss_en`, audio 202 si tarda. Para la mascota solo opciones sin peticiones nuevas
   (`cards_due` en `/health`, `counts` en el evento); si la mascota muestra algo lo decide Esteban.
-- **Esperando:** el "go" de Esteban (ambos lados) y la versión acordada en el `docs/API.md` del servidor.
+- **Acordado** (cc-server aceptó los 7 cambios; queda en su `docs/PLAN-phase6.md`, "API agreed with the laika-app
+  session"): `limit` ≤ 500 (50 por defecto); `/due` con `preview`, `now` y `counts`, e incluye nuevas hasta
+  `cards.new_per_day` (10 por defecto); `counts` = total, due, new, learning, suspended, trash, new_left_today;
+  cada escritura → `{card, edit_id}`; reseñas = Edit `review` (deshacible), `client_id` obligatorio e idempotente;
+  `unlock`; cambiar la lectura conserva el calendario; `gloss_es`/`gloss_en`; audio ogg/opus o 202 `{retry_after}`;
+  `/api/trash` trae `cards`; el evento `card` trae `counts`. `cards_due` en `/health`: lo decide Esteban
+  (`/health` es el endpoint abierto).
+- **Esperando:** el "go" de Esteban. Luego: modelos + backend simulado → pestaña Tarjetas → HttpLaika → prueba en vivo
+  cuando cc-server avise que está en su `docs/API.md` y en vivo.
