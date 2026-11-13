@@ -4,6 +4,7 @@
 // reciben clics (ver WindowBridge). 1 clic = escribirle, 2 clics = abrir la
 // app completa en una ventana normal (otro proceso con --app).
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -34,7 +35,11 @@ class _PetOverlayState extends State<PetOverlay> {
 
   Future<void> _openApp() async {
     try {
-      await Process.start(Platform.resolvedExecutable, ['--app'], mode: ProcessStartMode.detached);
+      // Hijo normal (no `detached`): con `detached` Dart deja el proceso
+      // intermedio como <defunct> por cada doble clic. Así la mascota lo espera
+      // y el sistema lo limpia al cerrar la app. Su salida va al journal.
+      final app = await Process.start(Platform.resolvedExecutable, ['--app'], mode: ProcessStartMode.inheritStdio);
+      unawaited(app.exitCode);
     } catch (_) {
       // Si no se pudo abrir, Laika sigue en el escritorio; no hay más que hacer.
     }

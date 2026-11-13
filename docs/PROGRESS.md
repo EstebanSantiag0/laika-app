@@ -228,7 +228,9 @@
 - Fase 2: **3/3** (feed con las 2 sugerencias; Aplicar → 409 al repetir → deshacer; No a borrarla). Prueba conjunta
   completa (14/14); las 5 tarjetas de prueba en la papelera.
 - **Instalado por Esteban** a las 12:38 (mascota + app con Tarjetas); sin volcados desde entonces.
-- Pendiente menor: cada doble clic (abrir `--app` con `Process.start(..., detached)`) deja un proceso `<defunct>` hijo
-  de la mascota (inofensivo, se van al reiniciarla). Arreglo posible: lanzar con `inheritStdio` y esperar su `exitCode`.
-- cc-server tiene la API de apariencia del chat (P6.4, `GET/PUT /api/appearance`, evento WS `appearance`); si la app la
-  sigue o no lo decide Esteban.
+- **Arreglado:** cada doble clic (abrir `--app` con `Process.start(..., detached)`) dejaba un proceso `<defunct>` hijo
+  de la mascota. Ahora se lanza como hijo normal (`inheritStdio`) y la mascota espera su `exitCode`
+  (`desktop/pet_overlay.dart`). Comprobado con un script: `detached` deja 1 zombi por lanzamiento, así 0.
+  Falta instalarlo (reiniciar la mascota también cierra la ventana `--app` abierta).
+- cc-server tiene la API de apariencia del chat (P6.4, `GET/PUT /api/appearance`). **Esteban: dejar el chat como está**
+  (la app no la sigue por ahora).
